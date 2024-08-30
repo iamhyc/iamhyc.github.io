@@ -1,6 +1,6 @@
 # Change baseurl before deploy
 baseurl = "https://sudofree.xyz"
-languageCode = "en-us"
+languageCode = "zh-cn"
 paginate = 5
 title = "My Shares and Proofs"
 
@@ -13,4 +13,4 @@ defaultContentLanguage = "zh-cn"
 hasCJKLanguage = true
 
 # Change it to your Disqus shortname before using
-disqusShortname = "hugo-theme-stack"
+disqusShortname = "sudofree"

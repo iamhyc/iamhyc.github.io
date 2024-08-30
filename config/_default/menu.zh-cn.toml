@@ -1,0 +1,23 @@
+# Configure main menu and social menu
+[[main]]
+identifier = "resume"
+name = "个人简历"
+weight = 10
+url = "https://resume.sudofree.xyz"
+[main.params]
+icon = "external-link"
+newtab = true
+
+[[social]]
+identifier = "github"
+name = "GitHub"
+url = "https://github.com/iamhyc"
+[social.params]
+icon = "brand-github"
+
+[[social]]
+identifier = "leetcode"
+name = "LeetCode"
+url = "https://leetcode.com/u/sudo_free/"
+[social.params]
+icon = "brand-leetcode"
