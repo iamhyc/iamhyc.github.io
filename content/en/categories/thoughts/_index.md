@@ -1,5 +1,5 @@
 ---
-title: Ideas
+title: Thoughts
 description: 
 image:
 
