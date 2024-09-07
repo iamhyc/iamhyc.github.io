@@ -11,14 +11,14 @@ SHELL_POPEN = lambda x: sp.Popen(x, stdout=sp.PIPE, stderr=sp.PIPE, shell=True)
 
 def non_empty_input(prompt, default=None):
     while True:
-        if default:
+        if default is not None:
             value = input(f'{prompt} (default: {default}): ')
         else:
             value = input(f'{prompt}: ')
         ##
         if value:
             return value
-        elif default:
+        elif default is not None:
             return default
 
 def main():
@@ -32,27 +32,29 @@ def main():
     ## input basic info
     title = non_empty_input('Enter the title')
     description = non_empty_input('Enter the description', '')
-    slug = non_empty_input('Enter the slug', title.lower().replace(" ", "-"))
+    slug = non_empty_input('Enter the slug',
+                           ''.join([x for x in title.lower().strip() if x not in '.,:-'])
+                           .replace(" ", "-") )
     date = datetime.now().strftime('%Y-%m-%d %H:%M:%S+0800')
 
     ## list categories
     cat_candidates = os.listdir(lang_path / 'categories')
     categories = non_empty_input(f'Enter the categories {cat_candidates}', '')
     categories = map(lambda x: x.strip(), categories.split(','))
-    categorie_text = ''.join([ f'  - {cat}\n' for cat in categories ])
+    categories_text = ''.join([ f'    - {cat}\n' for cat in categories ])
 
     ## pinned post
     pinned = non_empty_input('Is this a pinned post? (y/N)', 'n')
     weight_text = 'weight: 0' if pinned.lower() == 'y' else ''
 
     front_matter = f'''---
-title: {title}
+title: "{title}"
 description: {description}
 slug: {slug}
 date: {date}
 image: 
 categories:
-{categorie_text}
+{categories_text}
 tags: 
 {weight_text}
 ---
