@@ -1,0 +1,419 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content=" The following content is a rough translation by Github Copilot of the original post in Chinese.\nThe goal of Retrohos is to serve as the implementation of the RetroArch Frontend on OpenHarmony/HarmonyOS and to complete the porting of emulator cores from various communities, while also supporting the vision of distributed applications in the Harmony framework (e.g., experiences such as using a large screen display while the phone functions as a controller).\n"><title>Retrohos Development Log #1: Migrating Libretro Cores</title>
+<link rel=canonical href=https://sudofree.xyz/en/p/retrohos-development-logs-01-migrating-libretro-cores/><link rel=stylesheet href=/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css><meta property='og:title' content="Retrohos Development Log #1: Migrating Libretro Cores"><meta property='og:description' content=" The following content is a rough translation by Github Copilot of the original post in Chinese.\nThe goal of Retrohos is to serve as the implementation of the RetroArch Frontend on OpenHarmony/HarmonyOS and to complete the porting of emulator cores from various communities, while also supporting the vision of distributed applications in the Harmony framework (e.g., experiences such as using a large screen display while the phone functions as a controller).\n"><meta property='og:url' content='https://sudofree.xyz/en/p/retrohos-development-logs-01-migrating-libretro-cores/'><meta property='og:site_name' content='My Shares and Proofs'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='RetroArch'><meta property='article:tag' content='OpenHarmony'><meta property='article:published_time' content='2024-09-07T22:14:46+08:00'><meta property='article:modified_time' content='2024-09-07T22:14:46+08:00'><meta property='og:image' content='https://sudofree.xyz/en/p/retrohos-development-logs-01-migrating-libretro-cores/ppsspp-libretro-core.png'><meta name=twitter:title content="Retrohos Development Log #1: Migrating Libretro Cores"><meta name=twitter:description content=" The following content is a rough translation by Github Copilot of the original post in Chinese.\nThe goal of Retrohos is to serve as the implementation of the RetroArch Frontend on OpenHarmony/HarmonyOS and to complete the porting of emulator cores from various communities, while also supporting the vision of distributed applications in the Harmony framework (e.g., experiences such as using a large screen display while the phone functions as a controller).\n"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content='https://sudofree.xyz/en/p/retrohos-development-logs-01-migrating-libretro-cores/ppsspp-libretro-core.png'><link rel="shortcut icon" href=/favicon.png></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/en/><img src=/img/pika_hu14648587237871782958.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>💫</span></figure><div class=site-meta><h1 class=site-name><a href=/en>My Shares and Proofs</a></h1><h2 class=site-description>Freelance Researcher & Developer.</h2></div></header><ol class=menu-social><li><a href=https://github.com/iamhyc target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://leetcode.com/u/sudo_free/ target=_blank title=LeetCode rel=me><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-leetcode"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 13h7.5"/><path d="M9.424 7.268l4.999-4.999"/><path d="M16.633 16.644l-2.402 2.415a3.189 3.189.0 01-4.524.0l-3.77-3.787a3.223 3.223.0 010-4.544l3.77-3.787a3.189 3.189.0 014.524.0l2.302 2.313"/></svg></a></li><li><a href=https://x.com/sudo_free target=_blank title=Twitter rel=me><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-x"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4l11.733 16H20L8.267 4z"/><path d="M4 20l6.768-6.768m2.46-2.46L20 4"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/en/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/en/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/en/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/en/links/><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg>
+<span>Links</span></a></li><li><a href=https://resume.sudofree.xyz target=_blank><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-external-link"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6H6A2 2 0 004 8v10a2 2 0 002 2h10a2 2 0 002-2v-6"/><path d="M11 13l9-9"/><path d="M15 4h5v5"/></svg>
+<span>My Resume</span></a></li><li class=menu-bottom-section><ol class=menu><li id=i18n-switch><svg class="icon icon-tabler icon-tabler-language" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 5h7"/><path d="M9 3v2c0 4.418-2.239 8-5 8"/><path d="M5 9c-.003 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4-9 4 9"/><path d="M19.1 18h-6.2"/></svg>
+<select name=language title=language onchange="window.location.href=this.selectedOptions[0].value"><option value=https://sudofree.xyz/>简体中文</option><option value=https://sudofree.xyz/en/ selected>English</option></select></li><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#what-is-libretro>What is Libretro</a></li><li><a href=#preparing-the-ndk-environment>Preparing the NDK Environment</a></li><li><a href=#porting-libretro-cores>Porting Libretro Cores</a><ol><li><a href=#attempting-to-port-libretro-super>Attempting to Port <code>libretro-super</code></a></li><li><a href=#compiling-the-ppsspp-libretro-core>Compiling the <code>ppsspp-libretro</code> Core</a><ol><li><a href=#building-the-ppsspp-ffmpeg-static-library>Building the <code>ppsspp-ffmpeg</code> Static Library</a></li><li><a href=#building-ppsspp>Building <code>ppsspp</code></a></li></ol></li></ol></li><li><a href=#future-plans>Future Plans</a></li></ol></nav></div></section></aside><main class="main full-width"><article class="has-image main-article"><header class=article-header><div class=article-image><a href=/en/p/retrohos-development-logs-01-migrating-libretro-cores/><img src=/en/p/retrohos-development-logs-01-migrating-libretro-cores/ppsspp-libretro-core_hu13482447517370891851.png srcset="/en/p/retrohos-development-logs-01-migrating-libretro-cores/ppsspp-libretro-core_hu13482447517370891851.png 800w, /en/p/retrohos-development-logs-01-migrating-libretro-cores/ppsspp-libretro-core_hu7778135894478847070.png 1600w" width=800 height=131 loading=lazy alt="Featured image of post Retrohos Development Log #1: Migrating Libretro Cores"></a></div><div class=article-details><header class=article-category><a href=/en/categories/practice/ style=background-color:#ccd5ae;color:#fff>Practice</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/en/p/retrohos-development-logs-01-migrating-libretro-cores/>Retrohos Development Log #1: Migrating Libretro Cores</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published>Sep 07, 2024</time></div></footer><footer class=article-translations><svg class="icon icon-tabler icon-tabler-language" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 5h7"/><path d="M9 3v2c0 4.418-2.239 8-5 8"/><path d="M5 9c-.003 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4-9 4 9"/><path d="M19.1 18h-6.2"/></svg><div><a href=https://sudofree.xyz/p/retrohos-development-logs-01-migrating-libretro-cores/ class=link>简体中文</a></div></footer></div></header><section class=article-content><blockquote><p>The following content is a rough translation by <em>Github Copilot</em> of the original post in Chinese.</p></blockquote><p>The goal of Retrohos is to serve as the implementation of the RetroArch Frontend on OpenHarmony/HarmonyOS and to complete the porting of emulator cores from various communities, while also supporting the vision of distributed applications in the Harmony framework (e.g., experiences such as using a large screen display while the phone functions as a controller).</p><p>Since I previously only have rudimentary experience in Android mobile development (controlling Android screen casting via NDK), this log is merely a record of the application development exploration process, not the best implementation, and is for reference only.</p><h2 id=what-is-libretro><a href=#what-is-libretro class=header-anchor></a>What is Libretro</h2><p>RetroArch is a very popular retro gaming console solution. It doesn&rsquo;t provide any emulator functionality itself but acts as an aggregator for community emulators (Emulator Core) and provides a common interface definition, <a class=link href=https://www.libretro.com/index.php/api target=_blank rel=noopener>Libretro</a>. The following introduction is generated by ChatGPT:</p><blockquote><p>Libretro is a lightweight game console emulator core framework. Through the Libretro API, game cores (Core) can be separated from the frontend (Frontend), enabling cross-platform porting of cores and supporting multiple frontends such as RetroArch, Lakka, etc. The Libretro core is a dynamic link library that, through the Libretro API, can initialize game cores, handle input/output, and render audio and video.</p></blockquote><p>Libretro effectively separates the components of the emulator, allowing us to ignore the implementation of existing frontends (and their different GUI technology stacks) and focus on porting the core and integrating it with the system. Therefore, the goal of the Retrohos project is to implement a frontend compatible with the Libretro API while porting community Emulator Cores, rather than a complete port of RetroArch.</p><h2 id=preparing-the-ndk-environment><a href=#preparing-the-ndk-environment class=header-anchor></a>Preparing the NDK Environment</h2><p>For OpenHarmony development, I recommend using the HarmonyOS commercial release and the developer beta SDK provided by Huawei, rather than the community open-source version of OpenHarmony. Although the two currently have little difference (HarmonyOS Next Beta1 is based on OpenHarmony 5.0.0.xx), the only available and mature ecosystem is HarmonyOS. This is an unavoidable reality.</p><p>Fortunately, OpenHarmony NDK development is similar to Android and does not require the official IDE (DevEco Studio). The following development content will be based on command-line tools and performed on a Linux platform (Ubuntu 22.04.3 LTS).</p><p>Taking the latest official Linux version SDK (<code>5.0.0.800</code>) as an example, let&rsquo;s assume the <code>commandline-tools.zip</code> archive has been downloaded and extracted to the <code>$HOME</code> directory. To differentiate version numbers, rename the extracted directory to <code>command-line-tools/5.0.0.800</code> and create an <code>env.sh</code> file with the following content:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=cp>#!/bin/bash
+</span></span></span><span class=line><span class=cl><span class=cp></span><span class=nb>export</span> <span class=nv>OHOS_ROOT</span><span class=o>=</span><span class=nv>$HOME</span>/command-line-tools/5.0.3.800
+</span></span><span class=line><span class=cl><span class=nb>export</span> <span class=nv>SDK_ROOT</span><span class=o>=</span><span class=nv>$OHOS_ROOT</span>/sdk/default/openharmony
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1>## export NDK Path</span>
+</span></span><span class=line><span class=cl><span class=nb>export</span> <span class=nv>NDK_ROOT</span><span class=o>=</span><span class=nv>$SDK_ROOT</span>/native
+</span></span><span class=line><span class=cl><span class=nb>export</span> <span class=nv>PATH</span><span class=o>=</span><span class=nv>$NDK_ROOT</span>/build-tools/cmake/bin:<span class=nv>$PATH</span>
+</span></span><span class=line><span class=cl><span class=nb>export</span> <span class=nv>PATH</span><span class=o>=</span><span class=nv>$NDK_ROOT</span>/llvm/bin:<span class=nv>$PATH</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1>## export OHOS command line tools</span>
+</span></span><span class=line><span class=cl><span class=nb>export</span> <span class=nv>PATH</span><span class=o>=</span><span class=nv>$OHOS_ROOT</span>/tool/node/bin:<span class=nv>$PATH</span>
+</span></span><span class=line><span class=cl><span class=nb>export</span> <span class=nv>PATH</span><span class=o>=</span><span class=nv>$OHOS_ROOT</span>/bin:<span class=nv>$PATH</span>
+</span></span></code></pre></td></tr></table></div></div><p>Afterward, when using it, simply execute <code>source env.sh</code>. This file mainly serves the following purposes:</p><ul><li>Sets SDK-related environment variables. The variable names here are not specific requirements, just for easy reference.</li><li><code>$NDK_ROOT</code> points to the root directory of the NDK, making it easy to reference the compilation chain tools and link the <code>sysroot</code>.</li><li>Prepend the paths of <code>cmake</code> and <code>llvm</code> to <code>$PATH</code>, overriding the system&rsquo;s default compilation toolchain to ensure the use of the NDK-provided toolchain.</li></ul><p>According to the <a class=link href=https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V5/ndk-development-overview-V5 target=_blank rel=noopener>official NDK development documentation</a>, when calling the NDK-provided <code>cmake</code> compiler, the following parameters need to be passed (using <code>aarch64-linux-ohos</code> as an example):</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>cmake -DOHOS_STL<span class=o>=</span>c++_shared -DOHOS_ARCH<span class=o>=</span>arm64-v8a -DOHOS_PLATFORM<span class=o>=</span>OHOS -DCMAKE_TOOLCHAIN_FILE<span class=o>=</span><span class=si>${</span><span class=nv>NDK_ROOT</span><span class=si>}</span>/build/cmake/ohos.toolchain.cmake .
+</span></span></code></pre></td></tr></table></div></div><p>Among them, <code>CMAKE_TOOLCHAIN_FILE</code> is the most important, specifying the configuration file of the compilation chain, which will automatically link the <code>sysroot</code> provided by the NDK.</p><h2 id=porting-libretro-cores><a href=#porting-libretro-cores class=header-anchor></a>Porting Libretro Cores</h2><h3 id=attempting-to-port-libretro-super><a href=#attempting-to-port-libretro-super class=header-anchor></a>Attempting to Port <code>libretro-super</code></h3><p>The <a class=link href=https://github.com/libretro/libretro-super target=_blank rel=noopener><code>libretro/libretro-super</code></a> repository is a project for managing Libretro cores and RetroArch compilation scripts on different platforms, organized according to the target triplet identifier. Initially, I thought that OpenHarmony&rsquo;s underlying system was just the Linux kernel&rsquo;s <code>aarch64</code> architecture, and the dynamic libraries in the toolchain were quite common, unrelated to the SDK. Therefore, I attempted to directly port this super project. Unfortunately, due to the fact that the <code>ohos</code> / <code>OHOS</code> identifiers are not supported by many upstream dependencies and it will not automatically downgrade to the aarch64 Linux build process, a brute-force port would only lead to endless dependency resolution.</p><p>Therefore, the most appropriate solution is to use only the Libretro Core build process (forking repositories one by one for modification 😓) and abandon the overall porting of <code>libretro-super</code>, which is too messy. At the start of this project, we focused on porting the ppsspp core: it provides the option to build the <code>ppsspp-libretro</code> dynamic library with few third-party dependencies and was the first core to be successfully built.</p><h3 id=compiling-the-ppsspp-libretro-core><a href=#compiling-the-ppsspp-libretro-core class=header-anchor></a>Compiling the <code>ppsspp-libretro</code> Core</h3><h4 id=building-the-ppsspp-ffmpeg-static-library><a href=#building-the-ppsspp-ffmpeg-static-library class=header-anchor></a>Building the <code>ppsspp-ffmpeg</code> Static Library</h4><p>The <a class=link href=https://github.com/Retrohos/ppsspp target=_blank rel=noopener><code>hrydgard/ppsspp</code></a> repository introduces multiple third-party dependencies through <code>.gitmodules</code>, among which only the <code>hrydgard/ppsspp-ffmpeg</code> maintained by itself requires additional handling to add the <code>OHOS</code> architecture string. Refer to <code>android_arm64_v8a.sh</code> and correspondingly add the content of the <code>ohos_arm64-v8a.sh</code> file as follows:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>  1
+</span><span class=lnt>  2
+</span><span class=lnt>  3
+</span><span class=lnt>  4
+</span><span class=lnt>  5
+</span><span class=lnt>  6
+</span><span class=lnt>  7
+</span><span class=lnt>  8
+</span><span class=lnt>  9
+</span><span class=lnt> 10
+</span><span class=lnt> 11
+</span><span class=lnt> 12
+</span><span class=lnt> 13
+</span><span class=lnt> 14
+</span><span class=lnt> 15
+</span><span class=lnt> 16
+</span><span class=lnt> 17
+</span><span class=lnt> 18
+</span><span class=lnt> 19
+</span><span class=lnt> 20
+</span><span class=lnt> 21
+</span><span class=lnt> 22
+</span><span class=lnt> 23
+</span><span class=lnt> 24
+</span><span class=lnt> 25
+</span><span class=lnt> 26
+</span><span class=lnt> 27
+</span><span class=lnt> 28
+</span><span class=lnt> 29
+</span><span class=lnt> 30
+</span><span class=lnt> 31
+</span><span class=lnt> 32
+</span><span class=lnt> 33
+</span><span class=lnt> 34
+</span><span class=lnt> 35
+</span><span class=lnt> 36
+</span><span class=lnt> 37
+</span><span class=lnt> 38
+</span><span class=lnt> 39
+</span><span class=lnt> 40
+</span><span class=lnt> 41
+</span><span class=lnt> 42
+</span><span class=lnt> 43
+</span><span class=lnt> 44
+</span><span class=lnt> 45
+</span><span class=lnt> 46
+</span><span class=lnt> 47
+</span><span class=lnt> 48
+</span><span class=lnt> 49
+</span><span class=lnt> 50
+</span><span class=lnt> 51
+</span><span class=lnt> 52
+</span><span class=lnt> 53
+</span><span class=lnt> 54
+</span><span class=lnt> 55
+</span><span class=lnt> 56
+</span><span class=lnt> 57
+</span><span class=lnt> 58
+</span><span class=lnt> 59
+</span><span class=lnt> 60
+</span><span class=lnt> 61
+</span><span class=lnt> 62
+</span><span class=lnt> 63
+</span><span class=lnt> 64
+</span><span class=lnt> 65
+</span><span class=lnt> 66
+</span><span class=lnt> 67
+</span><span class=lnt> 68
+</span><span class=lnt> 69
+</span><span class=lnt> 70
+</span><span class=lnt> 71
+</span><span class=lnt> 72
+</span><span class=lnt> 73
+</span><span class=lnt> 74
+</span><span class=lnt> 75
+</span><span class=lnt> 76
+</span><span class=lnt> 77
+</span><span class=lnt> 78
+</span><span class=lnt> 79
+</span><span class=lnt> 80
+</span><span class=lnt> 81
+</span><span class=lnt> 82
+</span><span class=lnt> 83
+</span><span class=lnt> 84
+</span><span class=lnt> 85
+</span><span class=lnt> 86
+</span><span class=lnt> 87
+</span><span class=lnt> 88
+</span><span class=lnt> 89
+</span><span class=lnt> 90
+</span><span class=lnt> 91
+</span><span class=lnt> 92
+</span><span class=lnt> 93
+</span><span class=lnt> 94
+</span><span class=lnt> 95
+</span><span class=lnt> 96
+</span><span class=lnt> 97
+</span><span class=lnt> 98
+</span><span class=lnt> 99
+</span><span class=lnt>100
+</span><span class=lnt>101
+</span><span class=lnt>102
+</span><span class=lnt>103
+</span><span class=lnt>104
+</span><span class=lnt>105
+</span><span class=lnt>106
+</span><span class=lnt>107
+</span><span class=lnt>108
+</span><span class=lnt>109
+</span><span class=lnt>110
+</span><span class=lnt>111
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=cp>#!/bin/bash
+</span></span></span><span class=line><span class=cl><span class=cp></span>
+</span></span><span class=line><span class=cl><span class=k>if</span> <span class=o>[</span> <span class=s2>&#34;</span><span class=nv>$NDK_ROOT</span><span class=s2>&#34;</span> <span class=o>=</span> <span class=s2>&#34;&#34;</span> <span class=o>]</span><span class=p>;</span> <span class=k>then</span>
+</span></span><span class=line><span class=cl>    <span class=nb>echo</span> <span class=s2>&#34;Please set NDK_ROOT to your OpenHarmony NDK location.&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=nb>exit</span> <span class=m>1</span>
+</span></span><span class=line><span class=cl><span class=k>fi</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>NDK_PLATFORM</span><span class=o>=</span><span class=s2>&#34;aarch64-linux-ohos&#34;</span>
+</span></span><span class=line><span class=cl><span class=nv>NDK_PLATFORM_LIB</span><span class=o>=</span><span class=nv>$NDK_ROOT</span>/sysroot/usr/lib/<span class=nv>$NDK_PLATFORM</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>NDK_PREBUILTLLVM</span><span class=o>=</span><span class=nv>$NDK_ROOT</span>/llvm
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nb>set</span> -e
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>GENERAL</span><span class=o>=</span><span class=s2>&#34;\
+</span></span></span><span class=line><span class=cl><span class=s2>   --enable-cross-compile \
+</span></span></span><span class=line><span class=cl><span class=s2>   --enable-pic \
+</span></span></span><span class=line><span class=cl><span class=s2>   --cc=</span><span class=nv>$NDK_PREBUILTLLVM</span><span class=s2>/bin/clang \
+</span></span></span><span class=line><span class=cl><span class=s2>   --cross-prefix=</span><span class=nv>$NDK_PREBUILTLLVM</span><span class=s2>/bin/aarch64-unknown-linux-ohos- \
+</span></span></span><span class=line><span class=cl><span class=s2>   --ar=</span><span class=nv>$NDK_PREBUILTLLVM</span><span class=s2>/bin/llvm-ar \
+</span></span></span><span class=line><span class=cl><span class=s2>   --ld=</span><span class=nv>$NDK_PREBUILTLLVM</span><span class=s2>/bin/clang \
+</span></span></span><span class=line><span class=cl><span class=s2>   --nm=</span><span class=nv>$NDK_PREBUILTLLVM</span><span class=s2>/bin/llvm-nm \
+</span></span></span><span class=line><span class=cl><span class=s2>   --ranlib=</span><span class=nv>$NDK_PREBUILTLLVM</span><span class=s2>/bin/llvm-ranlib&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>MODULES</span><span class=o>=</span><span class=s2>&#34;\
+</span></span></span><span class=line><span class=cl><span class=s2>   --disable-avdevice \
+</span></span></span><span class=line><span class=cl><span class=s2>   --disable-filters \
+</span></span></span><span class=line><span class=cl><span class=s2>   --disable-programs \
+</span></span></span><span class=line><span class=cl><span class=s2>   --disable-network \
+</span></span></span><span class=line><span class=cl><span class=s2>   --disable-avfilter \
+</span></span></span><span class=line><span class=cl><span class=s2>   --disable-postproc \
+</span></span></span><span class=line><span class=cl><span class=s2>   --disable-encoders \
+</span></span></span><span class=line><span class=cl><span class=s2>   --disable-protocols \
+</span></span></span><span class=line><span class=cl><span class=s2>   --disable-hwaccels \
+</span></span></span><span class=line><span class=cl><span class=s2>   --disable-doc&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>VIDEO_DECODERS</span><span class=o>=</span><span class=s2>&#34;\
+</span></span></span><span class=line><span class=cl><span class=s2>   --enable-decoder=h264 \
+</span></span></span><span class=line><span class=cl><span class=s2>   --enable-decoder=mpeg4 \
+</span></span></span><span class=line><span class=cl><span class=s2>   --enable-decoder=mpeg2video \
+</span></span></span><span class=line><span class=cl><span class=s2>   --enable-decoder=mjpeg \
+</span></span></span><span class=line><span class=cl><span class=s2>   --enable-decoder=mjpegb&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>AUDIO_DECODERS</span><span class=o>=</span><span class=s2>&#34;\
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-decoder=aac \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-decoder=aac_latm \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-decoder=atrac3 \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-decoder=atrac3p \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-decoder=mp3 \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-decoder=pcm_s16le \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-decoder=pcm_s8&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>DEMUXERS</span><span class=o>=</span><span class=s2>&#34;\
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=h264 \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=m4v \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=mpegvideo \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=mpegps \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=mp3 \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=avi \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=aac \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=pmp \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=oma \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=pcm_s16le \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=pcm_s8 \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-demuxer=wav&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>VIDEO_ENCODERS</span><span class=o>=</span><span class=s2>&#34;\
+</span></span></span><span class=line><span class=cl><span class=s2>	  --enable-encoder=huffyuv
+</span></span></span><span class=line><span class=cl><span class=s2>	  --enable-encoder=ffv1&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>AUDIO_ENCODERS</span><span class=o>=</span><span class=s2>&#34;\
+</span></span></span><span class=line><span class=cl><span class=s2>	  --enable-encoder=pcm_s16le&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>MUXERS</span><span class=o>=</span><span class=s2>&#34;\
+</span></span></span><span class=line><span class=cl><span class=s2>  	--enable-muxer=avi&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nv>PARSERS</span><span class=o>=</span><span class=s2>&#34;\
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-parser=h264 \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-parser=mpeg4video \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-parser=mpegaudio \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-parser=mpegvideo \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-parser=aac \
+</span></span></span><span class=line><span class=cl><span class=s2>    --enable-parser=aac_latm&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>function</span> build_arm64
+</span></span><span class=line><span class=cl><span class=o>{</span>
+</span></span><span class=line><span class=cl>    <span class=c1># no-missing-prototypes because of a compile error seemingly unique to aarch64.</span>
+</span></span><span class=line><span class=cl>./configure --logfile<span class=o>=</span>conflog.txt --target-os<span class=o>=</span>linux <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    --prefix<span class=o>=</span>./ohos/arm64 <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    --arch<span class=o>=</span>aarch64 <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    <span class=si>${</span><span class=nv>GENERAL</span><span class=si>}</span> <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    --extra-cflags<span class=o>=</span><span class=s2>&#34; --target=aarch64-linux-ohos -no-canonical-prefixes -fdata-sections -ffunction-sections -fno-limit-debug-info -funwind-tables -fPIC -O2 -DOHOS -DOHOS_ARCH=arm64-v8a -DOHOS_PLATFORM=OHOS -DCMAKE_TOOLCHAIN_FILE=</span><span class=si>${</span><span class=nv>NDK_ROOT</span><span class=si>}</span><span class=s2>/build/cmake/ohos.toolchain.cmake -Dipv6mr_interface=ipv6mr_ifindex -fasm -fno-short-enums -fno-strict-aliasing -Wno-missing-prototypes&#34;</span> <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    --disable-shared <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    --enable-static <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    --extra-ldflags<span class=o>=</span><span class=s2>&#34; -B</span><span class=nv>$NDK_PREBUILTLLVM</span><span class=s2>/bin/aarch64-unknown-linux-ohos- --target=aarch64-linux-ohos -Wl,--rpath-link,</span><span class=nv>$NDK_PLATFORM_LIB</span><span class=s2> -L</span><span class=nv>$NDK_PLATFORM_LIB</span><span class=s2>  -nostdlib -lc -lm -ldl&#34;</span> <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    --enable-zlib <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    --disable-everything <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    <span class=si>${</span><span class=nv>MODULES</span><span class=si>}</span> <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    <span class=si>${</span><span class=nv>VIDEO_DECODERS</span><span class=si>}</span> <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    <span class=si>${</span><span class=nv>AUDIO_DECODERS</span><span class=si>}</span> <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    <span class=si>${</span><span class=nv>VIDEO_ENCODERS</span><span class=si>}</span> <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    <span class=si>${</span><span class=nv>AUDIO_ENCODERS</span><span class=si>}</span> <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    <span class=si>${</span><span class=nv>DEMUXERS</span><span class=si>}</span> <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    <span class=si>${</span><span class=nv>MUXERS</span><span class=si>}</span> <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>    <span class=si>${</span><span class=nv>PARSERS</span><span class=si>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>make clean
+</span></span><span class=line><span class=cl>make -j4 install
+</span></span><span class=line><span class=cl><span class=o>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>build_arm64
+</span></span></code></pre></td></tr></table></div></div><p>After preparing the NDK environment with <code>source env.sh</code>, execute the build script to generate static library files such as <code>libavcodec.a</code> under <code>ohos/arm64</code>, as well as header files under the <code>include</code> directory. After submitting the relevant changes, you can point the submodule in <code>ppsspp-libretro</code> to our modified repository <a class=link href=https://github.com/Retrohos/ppsspp-ffmpeg.git target=_blank rel=noopener><code>Retrohos/ppsspp-ffmpeg</code></a>.</p><h4 id=building-ppsspp><a href=#building-ppsspp class=header-anchor></a>Building <code>ppsspp</code></h4><p>The porting of <code>ppsspp-libretro</code> itself is relatively simple, only requiring the addition of OHOS architecture judgment in <code>CMakeLists.txt</code> and modification of the compilation options in <code>CMakeLists.txt</code>. The patch content is as follows:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span><span class=lnt>64
+</span><span class=lnt>65
+</span><span class=lnt>66
+</span><span class=lnt>67
+</span><span class=lnt>68
+</span><span class=lnt>69
+</span><span class=lnt>70
+</span><span class=lnt>71
+</span><span class=lnt>72
+</span><span class=lnt>73
+</span><span class=lnt>74
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-diff data-lang=diff><span class=line><span class=cl><span class=gh>diff --git a/CMakeLists.txt b/CMakeLists.txt
+</span></span></span><span class=line><span class=cl><span class=gh>index ad2be076b..2fe1e619c 100644
+</span></span></span><span class=line><span class=cl><span class=gh></span><span class=gd>--- a/CMakeLists.txt
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+++ b/CMakeLists.txt
+</span></span></span><span class=line><span class=cl><span class=gi></span><span class=gu>@@ -99,8 +99,12 @@ if(${CMAKE_SYSTEM_NAME} MATCHES &#34;Android&#34;)
+</span></span></span><span class=line><span class=cl><span class=gu></span> 	set(ANDROID ON)
+</span></span><span class=line><span class=cl> endif()
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=gi>+if(${CMAKE_SYSTEM_NAME} MATCHES &#34;OHOS&#34;)
+</span></span></span><span class=line><span class=cl><span class=gi>+	set(OHOS ON)
+</span></span></span><span class=line><span class=cl><span class=gi>+endif()
+</span></span></span><span class=line><span class=cl><span class=gi>+
+</span></span></span><span class=line><span class=cl><span class=gi></span> # We only support Vulkan on Unix, macOS (by MoltenVK), Android and Windows.
+</span></span><span class=line><span class=cl><span class=gd>-if(ANDROID OR WIN32 OR (UNIX AND NOT ARM_NO_VULKAN))
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+if(OHOS OR ANDROID OR WIN32 OR (UNIX AND NOT ARM_NO_VULKAN))
+</span></span></span><span class=line><span class=cl><span class=gi></span> 	set(VULKAN ON)
+</span></span><span class=line><span class=cl> endif()
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=gu>@@ -192,7 +196,7 @@ if(USE_CCACHE)
+</span></span></span><span class=line><span class=cl><span class=gu></span> 	include(ccache)
+</span></span><span class=line><span class=cl> endif()
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=gd>-if(UNIX AND NOT (APPLE OR ANDROID) AND VULKAN)
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+if(UNIX AND NOT (APPLE OR ANDROID OR OHOS) AND VULKAN)
+</span></span></span><span class=line><span class=cl><span class=gi></span> 	if(USING_X11_VULKAN)
+</span></span><span class=line><span class=cl> 		message(&#34;Using X11 for Vulkan&#34;)
+</span></span><span class=line><span class=cl> 		find_package(X11)
+</span></span><span class=line><span class=cl><span class=gu>@@ -225,7 +229,7 @@ if(LIBRETRO)
+</span></span></span><span class=line><span class=cl><span class=gu></span> 	endif()
+</span></span><span class=line><span class=cl> endif()
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=gd>-if(ANDROID)
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+if(ANDROID OR OHOS)
+</span></span></span><span class=line><span class=cl><span class=gi></span> 	set(MOBILE_DEVICE ON)
+</span></span><span class=line><span class=cl> 	set(USING_GLES2 ON)
+</span></span><span class=line><span class=cl> endif()
+</span></span><span class=line><span class=cl><span class=gu>@@ -382,7 +386,7 @@ if(NOT MSVC)
+</span></span></span><span class=line><span class=cl><span class=gu></span> 	# NEON optimizations in libpng17 seem to cause PNG load errors, see #14485.
+</span></span><span class=line><span class=cl> 	add_definitions(-DPNG_ARM_NEON_OPT=0)
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=gd>-	if(ANDROID)
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+	if(ANDROID OR OHOS)
+</span></span></span><span class=line><span class=cl><span class=gi></span> 		set(CMAKE_CXX_FLAGS &#34;${CMAKE_CXX_FLAGS} -std=gnu++17&#34;)
+</span></span><span class=line><span class=cl> 	endif()
+</span></span><span class=line><span class=cl> 	if(CLANG)
+</span></span><span class=line><span class=cl><span class=gu>@@ -474,7 +478,7 @@ if(NOT MSVC)
+</span></span></span><span class=line><span class=cl><span class=gu></span> 		if(${CMAKE_SYSTEM_NAME} STREQUAL &#34;NetBSD&#34;)
+</span></span><span class=line><span class=cl> 			add_definitions(-D_NETBSD_SOURCE)
+</span></span><span class=line><span class=cl> 		endif()
+</span></span><span class=line><span class=cl><span class=gd>-	elseif(ANDROID)
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+	elseif(ANDROID OR OHOS)
+</span></span></span><span class=line><span class=cl><span class=gi></span> 		add_definitions(-fsigned-char)
+</span></span><span class=line><span class=cl> 	endif()
+</span></span><span class=line><span class=cl> else()
+</span></span><span class=line><span class=cl><span class=gu>@@ -943,6 +947,10 @@ if(USE_FFMPEG)
+</span></span></span><span class=line><span class=cl><span class=gu></span> 				elseif(X86)
+</span></span><span class=line><span class=cl> 					set(PLATFORM_ARCH &#34;android/x86&#34;)
+</span></span><span class=line><span class=cl> 				endif()
+</span></span><span class=line><span class=cl><span class=gi>+			elseif(OHOS)
+</span></span></span><span class=line><span class=cl><span class=gi>+				if(ARM64)
+</span></span></span><span class=line><span class=cl><span class=gi>+					set(PLATFORM_ARCH &#34;ohos/arm64&#34;)
+</span></span></span><span class=line><span class=cl><span class=gi>+				endif()
+</span></span></span><span class=line><span class=cl><span class=gi></span> 			elseif(IOS)
+</span></span><span class=line><span class=cl> 				if(IOS_PLATFORM STREQUAL &#34;TVOS&#34;)
+</span></span><span class=line><span class=cl> 					set(PLATFORM_ARCH &#34;tvos/arm64&#34;)
+</span></span><span class=line><span class=cl><span class=gu>@@ -1200,7 +1208,7 @@ else()
+</span></span></span><span class=line><span class=cl><span class=gu></span> endif()
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl> # Arm platforms require at least libpng17.
+</span></span><span class=line><span class=cl><span class=gd>-if(ANDROID OR ARMV7 OR ARM64 OR ARM OR IOS)
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+if(OHOS OR ANDROID OR ARMV7 OR ARM64 OR ARM OR IOS)
+</span></span></span><span class=line><span class=cl><span class=gi></span> 	set(PNG_REQUIRED_VERSION 1.7)
+</span></span><span class=line><span class=cl> else()
+</span></span><span class=line><span class=cl> 	set(PNG_REQUIRED_VERSION 1.6)
+</span></span></code></pre></td></tr></table></div></div><p>After modifying, execute the following command to build the <code>ppsspp-libretro</code> core:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>cmake -DOHOS_STL<span class=o>=</span>c++_shared -DOHOS_ARCH<span class=o>=</span>arm64-v8a -DOHOS_PLATFORM<span class=o>=</span>OHOS -DCMAKE_TOOLCHAIN_FILE<span class=o>=</span><span class=si>${</span><span class=nv>NDK_ROOT</span><span class=si>}</span>/build/cmake/ohos.toolchain.cmake -DLIBRETRO<span class=o>=</span>ON -DUSING_EGL<span class=o>=</span>ON -DUSING_GLES2<span class=o>=</span>ON . -Bbuild
+</span></span></code></pre></td></tr></table></div></div><p>which will generate the <code>build</code> directory, and execute <code>make -j4</code> within it to generate the <code>lib/ppsspp_libretro.so</code> file.</p><h2 id=future-plans><a href=#future-plans class=header-anchor></a>Future Plans</h2><p>As the project&rsquo;s initial stage, the completion of a core port is sufficient for subsequent frontend development. The next step is to design a simple Libretro frontend and bind it through ArkTS NAPI to quickly implement framebuffer output. As for more important GUI design, we can wait for the improvement of the DevEco Studio development suite (～o￣3￣)～</p></section><footer class=article-footer><section class=article-tags><a href=/en/tags/retroarch/>RetroArch</a>
+<a href=/en/tags/openharmony/>OpenHarmony</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})</script></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article class=has-image><a href=/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/><div class=article-image><img src=/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak.79b0c0ccdf97fe8d375f131e485d936c_hu5368871258442188473.png width=250 height=150 loading=lazy alt="Featured image of post Solve Memory Leak in Vanilla Gaussian Splatting Code" data-key=solve-memory-leak-in-vanilla-gaussian-splatting-code data-hash="md5-ebDAzN+X/o03XxMeSF2TbA=="></div><div class=article-details><h2 class=article-title>Solve Memory Leak in Vanilla Gaussian Splatting Code</h2></div></a></article></div></div></aside><script src=https://giscus.app/client.js data-repo=iamhyc/iamhyc.github.io data-repo-id="MDEwOlJlcG9zaXRvcnkxMTEzMDI0Mjk=" data-category=Announcements data-category-id=DIC_kwDOBqJXHc4CiEQu data-mapping=pathname data-strict=0 data-reactions-enabled=1 data-emit-metadata=1 data-input-position=top data-theme=noborder_light data-lang=en data-loading crossorigin=anonymous async></script><script>function setGiscusTheme(e){let t=document.querySelector("iframe.giscus-frame");t&&t.contentWindow.postMessage({giscus:{setConfig:{theme:e}}},"https://giscus.app")}(function(){addEventListener("message",t=>{if(event.origin!=="https://giscus.app")return;e()}),window.addEventListener("onColorSchemeChange",e);function e(){setGiscusTheme(document.documentElement.dataset.scheme==="light"?"noborder_light":"noborder_dark")}})()</script><footer class=site-footer><section class=copyright>&copy;
+2024 My Shares and Proofs</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.29.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.1e9a3bafd846ced4c345d084b355fb8c7bae75701c338f8a1f8a82c780137826.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

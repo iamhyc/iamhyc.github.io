@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>OpenHarmony on My Shares and Proofs</title><link>https://sudofree.xyz/tags/openharmony/</link><description>Recent content in OpenHarmony on My Shares and Proofs</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Sat, 07 Sep 2024 22:14:46 +0800</lastBuildDate><atom:link href="https://sudofree.xyz/tags/openharmony/index.xml" rel="self" type="application/rss+xml"/><item><title>Retrohos 开发日志其一: 移植 Libretro Cores</title><link>https://sudofree.xyz/p/retrohos-development-logs-01-migrating-libretro-cores/</link><pubDate>Sat, 07 Sep 2024 22:14:46 +0800</pubDate><guid>https://sudofree.xyz/p/retrohos-development-logs-01-migrating-libretro-cores/</guid><description>&lt;img src="https://sudofree.xyz/p/retrohos-development-logs-01-migrating-libretro-cores/ppsspp-libretro-core.png" alt="Featured image of post Retrohos 开发日志其一: 移植 Libretro Cores" />&lt;p>Retrohos 的目标是作为 OpenHarmony/HarmonyOS 上 RetroArch Frontend 的实现以及完成各社区 Emulator 核心的移植，并同时支持鸿蒙框架关于&lt;strong>分布式应用&lt;/strong>的愿景（如大屏显示同时手机作为手柄的体验）。
+由于本人之前只有粗浅的 Android 移动端开发经验（&lt;a class="link" href="https://github.com/lasso-sustech/AndroidScreenCaster" target="_blank" rel="noopener"
+>通过NDK控制Android投屏&lt;/a>），本日志仅作为应用开发探索过程中的记录，并非最佳实现，仅供参考。&lt;/p>
+&lt;h2 id="什么是-libretro">&lt;a href="#%e4%bb%80%e4%b9%88%e6%98%af-libretro" class="header-anchor">&lt;/a>什么是 Libretro
+&lt;/h2>&lt;p>RetroArch 是一个非常流行的怀旧游戏主机解决方案。它本身并不提供任何仿真器的功能 &lt;del>只是大自然的搬运工&lt;/del>，只是提供了聚合社区仿真器（Emulator Core）的平台，以及一个通用的接入接口定义 &lt;a class="link" href="https://www.libretro.com/index.php/api" target="_blank" rel="noopener"
+>Libretro&lt;/a>。以下简介生成自 ChatGPT :&lt;/p>
+&lt;blockquote>
+&lt;p>Libretro 是一个轻量级的游戏机模拟器核心框架，通过 Libretro API，可以将游戏核心（Core）与前端（Frontend）分离，实现核心的跨平台移植，同时支持多种前端，如 RetroArch、Lakka 等。Libretro 核心是一个动态链接库，通过调用 Libretro API，可以实现游戏核心的初始化、输入输出、音频视频渲染等功能。&lt;/p>
+&lt;/blockquote>
+&lt;p>Libretro 很好地将模拟器的构成区分开来，使得我们可以忽略现有前端的实现（以及各异的GUI技术栈），专注于核心的移植以及与系统的对接。因此 Retrohos 项目的目标是将实现一个兼容 Libretro API 的前端，同时移植社区的 Emulator Core，而非 RetroArch 的完整移植。&lt;/p>
+&lt;h2 id="准备-ndk-环境">&lt;a href="#%e5%87%86%e5%a4%87-ndk-%e7%8e%af%e5%a2%83" class="header-anchor">&lt;/a>准备 NDK 环境
+&lt;/h2>&lt;p>目前关于 OpenHarmony 的开发，本人推荐直接使用 HarmonyOS 商业发行版以及华为提供的开发者内测SDK，而非社区开源的 OpenHarmony 版本；虽然两者目前差异度不大（HarmonyOS Next Beta1 基于 OpenHarmony 5.0.0.xx），但目前唯一可用且成熟的生态环境只有 HarmonyOS，这是一个不得不接受的现状。
+但好在 OpenHarmony NDK 开发与 Android 类似，并不需要依赖官方提供的IDE（DevEco Studio）；以下的开发内容将以命令行工具为基础，在 Linux 平台（Ubuntu 22.04.3 LTS）上进行。&lt;/p>
+&lt;p>以当前最新的官方Linux版本SDK（&lt;code>5.0.0.800&lt;/code>）为例，以下假设 &lt;code>commandline-tools.zip&lt;/code> 压缩包已经下载并解压到 &lt;code>$HOME&lt;/code> 目录下；为了方便区分版本号，将解压后的目录重新命名为 &lt;code>command-line-tools/5.0.0.800&lt;/code>，并在其中创建 &lt;code>env.sh&lt;/code> 文件，内容如下：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#!/bin/bash
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>&lt;span class="nb">export&lt;/span> &lt;span class="nv">OHOS_ROOT&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$HOME&lt;/span>/command-line-tools/5.0.3.800
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">SDK_ROOT&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$OHOS_ROOT&lt;/span>/sdk/default/openharmony
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">## export NDK Path&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">NDK_ROOT&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$SDK_ROOT&lt;/span>/native
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">PATH&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$NDK_ROOT&lt;/span>/build-tools/cmake/bin:&lt;span class="nv">$PATH&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">PATH&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$NDK_ROOT&lt;/span>/llvm/bin:&lt;span class="nv">$PATH&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">## export OHOS command line tools&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">PATH&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$OHOS_ROOT&lt;/span>/tool/node/bin:&lt;span class="nv">$PATH&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">PATH&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$OHOS_ROOT&lt;/span>/bin:&lt;span class="nv">$PATH&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>之后在使用时，只需执行 &lt;code>source env.sh&lt;/code> 即可。该文件主要起到以下作用：&lt;/p>
+&lt;ul>
+&lt;li>设置SDK相关环境变量，这里变量名称没有特殊要求，只是为了方便后续引用；&lt;/li>
+&lt;li>&lt;code>$NDK_ROOT&lt;/code> 指向 NDK 的根目录，方便后续引用编译链工具，以及链接 &lt;code>sysroot&lt;/code>；&lt;/li>
+&lt;li>&lt;code>$PATH&lt;/code> 中前置添加了 &lt;code>cmake&lt;/code> 和 &lt;code>llvm&lt;/code> 的路径，会覆盖掉系统默认的编译工具链， 以确保使用 NDK 提供的工具链。&lt;/li>
+&lt;/ul>
+&lt;p>另外根据&lt;a class="link" href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V5/ndk-development-overview-V5" target="_blank" rel="noopener"
+>官方NDK开发文档&lt;/a>，在调用 NDK 提供的 &lt;code>cmake&lt;/code> 编译时，需要传入以下参数（以 &lt;code>aarch64-linux-ohos&lt;/code> 为例）：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">cmake -DOHOS_STL&lt;span class="o">=&lt;/span>c++_shared -DOHOS_ARCH&lt;span class="o">=&lt;/span>arm64-v8a -DOHOS_PLATFORM&lt;span class="o">=&lt;/span>OHOS -DCMAKE_TOOLCHAIN_FILE&lt;span class="o">=&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">NDK_ROOT&lt;/span>&lt;span class="si">}&lt;/span>/build/cmake/ohos.toolchain.cmake .
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>其中 &lt;code>CMAKE_TOOLCHAIN_FILE&lt;/code> 最为重要，指定了编译链的配置文件，该文件会自动链接 NDK 提供的 &lt;code>sysroot&lt;/code>。&lt;/p>
+&lt;h2 id="移植-libretro-核心">&lt;a href="#%e7%a7%bb%e6%a4%8d-libretro-%e6%a0%b8%e5%bf%83" class="header-anchor">&lt;/a>移植 Libretro 核心
+&lt;/h2>&lt;h3 id="libretro-super-移植尝试">&lt;a href="#libretro-super-%e7%a7%bb%e6%a4%8d%e5%b0%9d%e8%af%95" class="header-anchor">&lt;/a>&lt;code>libretro-super&lt;/code> 移植尝试
+&lt;/h3>&lt;p>&lt;a class="link" href="https://github.com/libretro/libretro-super" target="_blank" rel="noopener"
+>&lt;code>libretro/libretro-super&lt;/code>&lt;/a> 仓库是一个用于管理 Libretro 核心以及 RetroArch 在不同平台编译脚本的管理项目，其按照 &lt;em>target triplet&lt;/em> 标识与组织不同平台下的构建流程。
+最初，我以为 OpenHarmony 底层不过是 Linux kernel 的 &lt;code>aarch64&lt;/code> 架构，工具链中的动态库也都很常见，与 SDK关系不大，因此尝试直接移植这个超级项目。然而可惜的是，由于 &lt;code>ohos&lt;/code> / &lt;code>OHOS&lt;/code> 标识并非众多上游依赖支持的平台，并且它也不会被自动降级到 aarch64 Linux 的构建流程中，暴力移植只会陷入到无限的依赖解决中。&lt;/p>
+&lt;p>因此最合适的解决方案，是仅采用 Libretro Core 的构建流程（逐个 Fork 仓库进行修改😓），抛弃 &lt;code>libretro-super&lt;/code> 这个过于杂乱的项目的整体移植。在本项目的启动阶段，我们聚焦于 ppsspp 核心的移植：它本身提供了 &lt;code>ppsspp-libretro&lt;/code> 的动态库构建选项，三方依赖较少，是第一个成功构建的核心。&lt;/p>
+&lt;h3 id="编译-ppsspp-libretro-核心">&lt;a href="#%e7%bc%96%e8%af%91-ppsspp-libretro-%e6%a0%b8%e5%bf%83" class="header-anchor">&lt;/a>编译 &lt;code>ppsspp-libretro&lt;/code> 核心
+&lt;/h3>&lt;h4 id="ppsspp-ffmpeg-静态库构建">&lt;a href="#ppsspp-ffmpeg-%e9%9d%99%e6%80%81%e5%ba%93%e6%9e%84%e5%bb%ba" class="header-anchor">&lt;/a>&lt;code>ppsspp-ffmpeg&lt;/code> 静态库构建
+&lt;/h4>&lt;p>&lt;a class="link" href="https://github.com/Retrohos/ppsspp" target="_blank" rel="noopener"
+>&lt;code>hrydgard/ppsspp&lt;/code>&lt;/a> 通过 &lt;code>.gitmodules&lt;/code> 引入了多个三方依赖，其中只有其自己维护的 &lt;code>hrydgard/ppsspp-ffmpeg&lt;/code> 需要额外处理 &lt;code>OHOS&lt;/code> 架构字符串的添加，参考 &lt;code>android_arm64_v8a.sh&lt;/code> 并对应添加 &lt;code>ohos_arm64-v8a.sh&lt;/code> 文件内容如下：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt"> 10
+&lt;/span>&lt;span class="lnt"> 11
+&lt;/span>&lt;span class="lnt"> 12
+&lt;/span>&lt;span class="lnt"> 13
+&lt;/span>&lt;span class="lnt"> 14
+&lt;/span>&lt;span class="lnt"> 15
+&lt;/span>&lt;span class="lnt"> 16
+&lt;/span>&lt;span class="lnt"> 17
+&lt;/span>&lt;span class="lnt"> 18
+&lt;/span>&lt;span class="lnt"> 19
+&lt;/span>&lt;span class="lnt"> 20
+&lt;/span>&lt;span class="lnt"> 21
+&lt;/span>&lt;span class="lnt"> 22
+&lt;/span>&lt;span class="lnt"> 23
+&lt;/span>&lt;span class="lnt"> 24
+&lt;/span>&lt;span class="lnt"> 25
+&lt;/span>&lt;span class="lnt"> 26
+&lt;/span>&lt;span class="lnt"> 27
+&lt;/span>&lt;span class="lnt"> 28
+&lt;/span>&lt;span class="lnt"> 29
+&lt;/span>&lt;span class="lnt"> 30
+&lt;/span>&lt;span class="lnt"> 31
+&lt;/span>&lt;span class="lnt"> 32
+&lt;/span>&lt;span class="lnt"> 33
+&lt;/span>&lt;span class="lnt"> 34
+&lt;/span>&lt;span class="lnt"> 35
+&lt;/span>&lt;span class="lnt"> 36
+&lt;/span>&lt;span class="lnt"> 37
+&lt;/span>&lt;span class="lnt"> 38
+&lt;/span>&lt;span class="lnt"> 39
+&lt;/span>&lt;span class="lnt"> 40
+&lt;/span>&lt;span class="lnt"> 41
+&lt;/span>&lt;span class="lnt"> 42
+&lt;/span>&lt;span class="lnt"> 43
+&lt;/span>&lt;span class="lnt"> 44
+&lt;/span>&lt;span class="lnt"> 45
+&lt;/span>&lt;span class="lnt"> 46
+&lt;/span>&lt;span class="lnt"> 47
+&lt;/span>&lt;span class="lnt"> 48
+&lt;/span>&lt;span class="lnt"> 49
+&lt;/span>&lt;span class="lnt"> 50
+&lt;/span>&lt;span class="lnt"> 51
+&lt;/span>&lt;span class="lnt"> 52
+&lt;/span>&lt;span class="lnt"> 53
+&lt;/span>&lt;span class="lnt"> 54
+&lt;/span>&lt;span class="lnt"> 55
+&lt;/span>&lt;span class="lnt"> 56
+&lt;/span>&lt;span class="lnt"> 57
+&lt;/span>&lt;span class="lnt"> 58
+&lt;/span>&lt;span class="lnt"> 59
+&lt;/span>&lt;span class="lnt"> 60
+&lt;/span>&lt;span class="lnt"> 61
+&lt;/span>&lt;span class="lnt"> 62
+&lt;/span>&lt;span class="lnt"> 63
+&lt;/span>&lt;span class="lnt"> 64
+&lt;/span>&lt;span class="lnt"> 65
+&lt;/span>&lt;span class="lnt"> 66
+&lt;/span>&lt;span class="lnt"> 67
+&lt;/span>&lt;span class="lnt"> 68
+&lt;/span>&lt;span class="lnt"> 69
+&lt;/span>&lt;span class="lnt"> 70
+&lt;/span>&lt;span class="lnt"> 71
+&lt;/span>&lt;span class="lnt"> 72
+&lt;/span>&lt;span class="lnt"> 73
+&lt;/span>&lt;span class="lnt"> 74
+&lt;/span>&lt;span class="lnt"> 75
+&lt;/span>&lt;span class="lnt"> 76
+&lt;/span>&lt;span class="lnt"> 77
+&lt;/span>&lt;span class="lnt"> 78
+&lt;/span>&lt;span class="lnt"> 79
+&lt;/span>&lt;span class="lnt"> 80
+&lt;/span>&lt;span class="lnt"> 81
+&lt;/span>&lt;span class="lnt"> 82
+&lt;/span>&lt;span class="lnt"> 83
+&lt;/span>&lt;span class="lnt"> 84
+&lt;/span>&lt;span class="lnt"> 85
+&lt;/span>&lt;span class="lnt"> 86
+&lt;/span>&lt;span class="lnt"> 87
+&lt;/span>&lt;span class="lnt"> 88
+&lt;/span>&lt;span class="lnt"> 89
+&lt;/span>&lt;span class="lnt"> 90
+&lt;/span>&lt;span class="lnt"> 91
+&lt;/span>&lt;span class="lnt"> 92
+&lt;/span>&lt;span class="lnt"> 93
+&lt;/span>&lt;span class="lnt"> 94
+&lt;/span>&lt;span class="lnt"> 95
+&lt;/span>&lt;span class="lnt"> 96
+&lt;/span>&lt;span class="lnt"> 97
+&lt;/span>&lt;span class="lnt"> 98
+&lt;/span>&lt;span class="lnt"> 99
+&lt;/span>&lt;span class="lnt">100
+&lt;/span>&lt;span class="lnt">101
+&lt;/span>&lt;span class="lnt">102
+&lt;/span>&lt;span class="lnt">103
+&lt;/span>&lt;span class="lnt">104
+&lt;/span>&lt;span class="lnt">105
+&lt;/span>&lt;span class="lnt">106
+&lt;/span>&lt;span class="lnt">107
+&lt;/span>&lt;span class="lnt">108
+&lt;/span>&lt;span class="lnt">109
+&lt;/span>&lt;span class="lnt">110
+&lt;/span>&lt;span class="lnt">111
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#!/bin/bash
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> &lt;span class="o">[&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$NDK_ROOT&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span> &lt;span class="o">]&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;Please set NDK_ROOT to your OpenHarmony NDK location.&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">exit&lt;/span> &lt;span class="m">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">NDK_PLATFORM&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;aarch64-linux-ohos&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">NDK_PLATFORM_LIB&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$NDK_ROOT&lt;/span>/sysroot/usr/lib/&lt;span class="nv">$NDK_PLATFORM&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">NDK_PREBUILTLLVM&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$NDK_ROOT&lt;/span>/llvm
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">set&lt;/span> -e
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">GENERAL&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-cross-compile \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-pic \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --cc=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/clang \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --cross-prefix=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/aarch64-unknown-linux-ohos- \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --ar=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/llvm-ar \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --ld=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/clang \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --nm=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/llvm-nm \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --ranlib=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/llvm-ranlib&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">MODULES&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-avdevice \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-filters \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-programs \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-network \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-avfilter \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-postproc \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-encoders \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-protocols \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-hwaccels \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-doc&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">VIDEO_DECODERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=h264 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=mpeg4 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=mpeg2video \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=mjpeg \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=mjpegb&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">AUDIO_DECODERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=aac \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=aac_latm \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=atrac3 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=atrac3p \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=mp3 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=pcm_s16le \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=pcm_s8&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">DEMUXERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=h264 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=m4v \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=mpegvideo \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=mpegps \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=mp3 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=avi \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=aac \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=pmp \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=oma \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=pcm_s16le \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=pcm_s8 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=wav&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">VIDEO_ENCODERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-encoder=huffyuv
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-encoder=ffv1&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">AUDIO_ENCODERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-encoder=pcm_s16le&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">MUXERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-muxer=avi&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">PARSERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=h264 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=mpeg4video \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=mpegaudio \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=mpegvideo \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=aac \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=aac_latm&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">function&lt;/span> build_arm64
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># no-missing-prototypes because of a compile error seemingly unique to aarch64.&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">./configure --logfile&lt;span class="o">=&lt;/span>conflog.txt --target-os&lt;span class="o">=&lt;/span>linux &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --prefix&lt;span class="o">=&lt;/span>./ohos/arm64 &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --arch&lt;span class="o">=&lt;/span>aarch64 &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">GENERAL&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --extra-cflags&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34; --target=aarch64-linux-ohos -no-canonical-prefixes -fdata-sections -ffunction-sections -fno-limit-debug-info -funwind-tables -fPIC -O2 -DOHOS -DOHOS_ARCH=arm64-v8a -DOHOS_PLATFORM=OHOS -DCMAKE_TOOLCHAIN_FILE=&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">NDK_ROOT&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">/build/cmake/ohos.toolchain.cmake -Dipv6mr_interface=ipv6mr_ifindex -fasm -fno-short-enums -fno-strict-aliasing -Wno-missing-prototypes&amp;#34;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --disable-shared &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --enable-static &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --extra-ldflags&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34; -B&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/aarch64-unknown-linux-ohos- --target=aarch64-linux-ohos -Wl,--rpath-link,&lt;/span>&lt;span class="nv">$NDK_PLATFORM_LIB&lt;/span>&lt;span class="s2"> -L&lt;/span>&lt;span class="nv">$NDK_PLATFORM_LIB&lt;/span>&lt;span class="s2"> -nostdlib -lc -lm -ldl&amp;#34;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --enable-zlib &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --disable-everything &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">MODULES&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">VIDEO_DECODERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">AUDIO_DECODERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">VIDEO_ENCODERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">AUDIO_ENCODERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">DEMUXERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">MUXERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">PARSERS&lt;/span>&lt;span class="si">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">make clean
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">make -j4 install
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">build_arm64
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>通过之前提到的 &lt;code>source env.sh&lt;/code> 准备好 NDK 环境后，随后执行该构建脚本，在 &lt;code>ohos/arm64&lt;/code> 下生成 &lt;code>libavcodec.a&lt;/code> 等静态库文件，以及 &lt;code>include&lt;/code> 目录下的头文件。
+提交相关更改后，即可在 &lt;code>ppsspp-libretro&lt;/code> 中将 submodule 指向我们修改后的仓库 &lt;a class="link" href="https://github.com/Retrohos/ppsspp-ffmpeg.git" target="_blank" rel="noopener"
+>&lt;code>Retrohos/ppsspp-ffmpeg&lt;/code>&lt;/a>.&lt;/p>
+&lt;h4 id="ppsspp-构建">&lt;a href="#ppsspp-%e6%9e%84%e5%bb%ba" class="header-anchor">&lt;/a>&lt;code>ppsspp&lt;/code> 构建
+&lt;/h4>&lt;p>&lt;code>ppsspp-libretro&lt;/code> 本身的移植较为简单，只需要在 &lt;code>CMakeLists.txt&lt;/code> 中添加 OHOS 架构的判断，以及修改 &lt;code>CMakeLists.txt&lt;/code> 中的编译选项，patch 内容如下：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;span class="lnt">45
+&lt;/span>&lt;span class="lnt">46
+&lt;/span>&lt;span class="lnt">47
+&lt;/span>&lt;span class="lnt">48
+&lt;/span>&lt;span class="lnt">49
+&lt;/span>&lt;span class="lnt">50
+&lt;/span>&lt;span class="lnt">51
+&lt;/span>&lt;span class="lnt">52
+&lt;/span>&lt;span class="lnt">53
+&lt;/span>&lt;span class="lnt">54
+&lt;/span>&lt;span class="lnt">55
+&lt;/span>&lt;span class="lnt">56
+&lt;/span>&lt;span class="lnt">57
+&lt;/span>&lt;span class="lnt">58
+&lt;/span>&lt;span class="lnt">59
+&lt;/span>&lt;span class="lnt">60
+&lt;/span>&lt;span class="lnt">61
+&lt;/span>&lt;span class="lnt">62
+&lt;/span>&lt;span class="lnt">63
+&lt;/span>&lt;span class="lnt">64
+&lt;/span>&lt;span class="lnt">65
+&lt;/span>&lt;span class="lnt">66
+&lt;/span>&lt;span class="lnt">67
+&lt;/span>&lt;span class="lnt">68
+&lt;/span>&lt;span class="lnt">69
+&lt;/span>&lt;span class="lnt">70
+&lt;/span>&lt;span class="lnt">71
+&lt;/span>&lt;span class="lnt">72
+&lt;/span>&lt;span class="lnt">73
+&lt;/span>&lt;span class="lnt">74
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-diff" data-lang="diff">&lt;span class="line">&lt;span class="cl">&lt;span class="gh">diff --git a/CMakeLists.txt b/CMakeLists.txt
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gh">index ad2be076b..2fe1e619c 100644
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gh">&lt;/span>&lt;span class="gd">--- a/CMakeLists.txt
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+++ b/CMakeLists.txt
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span>&lt;span class="gu">@@ -99,8 +99,12 @@ if(${CMAKE_SYSTEM_NAME} MATCHES &amp;#34;Android&amp;#34;)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> set(ANDROID ON)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+if(${CMAKE_SYSTEM_NAME} MATCHES &amp;#34;OHOS&amp;#34;)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ set(OHOS ON)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+endif()
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> # We only support Vulkan on Unix, macOS (by MoltenVK), Android and Windows.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">-if(ANDROID OR WIN32 OR (UNIX AND NOT ARM_NO_VULKAN))
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+if(OHOS OR ANDROID OR WIN32 OR (UNIX AND NOT ARM_NO_VULKAN))
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> set(VULKAN ON)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -192,7 +196,7 @@ if(USE_CCACHE)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> include(ccache)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">-if(UNIX AND NOT (APPLE OR ANDROID) AND VULKAN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+if(UNIX AND NOT (APPLE OR ANDROID OR OHOS) AND VULKAN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> if(USING_X11_VULKAN)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> message(&amp;#34;Using X11 for Vulkan&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> find_package(X11)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -225,7 +229,7 @@ if(LIBRETRO)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">-if(ANDROID)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+if(ANDROID OR OHOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> set(MOBILE_DEVICE ON)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> set(USING_GLES2 ON)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -382,7 +386,7 @@ if(NOT MSVC)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> # NEON optimizations in libpng17 seem to cause PNG load errors, see #14485.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> add_definitions(-DPNG_ARM_NEON_OPT=0)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- if(ANDROID)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+ if(ANDROID OR OHOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> set(CMAKE_CXX_FLAGS &amp;#34;${CMAKE_CXX_FLAGS} -std=gnu++17&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> if(CLANG)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -474,7 +478,7 @@ if(NOT MSVC)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> if(${CMAKE_SYSTEM_NAME} STREQUAL &amp;#34;NetBSD&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> add_definitions(-D_NETBSD_SOURCE)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- elseif(ANDROID)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+ elseif(ANDROID OR OHOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> add_definitions(-fsigned-char)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> else()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -943,6 +947,10 @@ if(USE_FFMPEG)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> elseif(X86)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> set(PLATFORM_ARCH &amp;#34;android/x86&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ elseif(OHOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ if(ARM64)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ set(PLATFORM_ARCH &amp;#34;ohos/arm64&amp;#34;)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ endif()
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> elseif(IOS)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> if(IOS_PLATFORM STREQUAL &amp;#34;TVOS&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> set(PLATFORM_ARCH &amp;#34;tvos/arm64&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -1200,7 +1208,7 @@ else()
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> # Arm platforms require at least libpng17.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">-if(ANDROID OR ARMV7 OR ARM64 OR ARM OR IOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+if(OHOS OR ANDROID OR ARMV7 OR ARM64 OR ARM OR IOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> set(PNG_REQUIRED_VERSION 1.7)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> else()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> set(PNG_REQUIRED_VERSION 1.6)
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>修改完成后执行&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">cmake -DOHOS_STL&lt;span class="o">=&lt;/span>c++_shared -DOHOS_ARCH&lt;span class="o">=&lt;/span>arm64-v8a -DOHOS_PLATFORM&lt;span class="o">=&lt;/span>OHOS -DCMAKE_TOOLCHAIN_FILE&lt;span class="o">=&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">NDK_ROOT&lt;/span>&lt;span class="si">}&lt;/span>/build/cmake/ohos.toolchain.cmake -DLIBRETRO&lt;span class="o">=&lt;/span>ON -DUSING_EGL&lt;span class="o">=&lt;/span>ON -DUSING_GLES2&lt;span class="o">=&lt;/span>ON . -Bbuild
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>创建 &lt;code>build&lt;/code> 目录，并在其中执行 &lt;code>make -j4&lt;/code> 即可生成 &lt;code>lib/ppsspp_libretro.so&lt;/code> 文件。&lt;/p>
+&lt;h2 id="后续计划">&lt;a href="#%e5%90%8e%e7%bb%ad%e8%ae%a1%e5%88%92" class="header-anchor">&lt;/a>后续计划
+&lt;/h2>&lt;p>作为项目的启动阶段，一个核心的移植已经足够我们进行后续的前端开发。接下来计划先设计一个简单的 Libretro 前端，并通过 ArkTS NAPI 进行绑定调用，快速实现 framebuffer 的输出。至于更为重要的 GUI 设计，可以再等等 DevEco Studio 开发套件的完善(～o￣3￣)～&lt;/p></description></item></channel></rss>

@@ -1,0 +1,1124 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>工程实践 on My Shares and Proofs</title><link>https://sudofree.xyz/categories/practice/</link><description>Recent content in 工程实践 on My Shares and Proofs</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Tue, 31 Dec 2024 19:00:00 +0800</lastBuildDate><atom:link href="https://sudofree.xyz/categories/practice/index.xml" rel="self" type="application/rss+xml"/><item><title>开发日志：Aigis Authenticator for HarmonyOS NEXT</title><link>https://sudofree.xyz/p/developer-log-aigis-authenticator-for-harmonyos-next/</link><pubDate>Tue, 31 Dec 2024 19:00:00 +0800</pubDate><guid>https://sudofree.xyz/p/developer-log-aigis-authenticator-for-harmonyos-next/</guid><description>&lt;img src="https://sudofree.xyz/p/developer-log-aigis-authenticator-for-harmonyos-next/screenshot-preview.png" alt="Featured image of post 开发日志：Aigis Authenticator for HarmonyOS NEXT" />&lt;p>&lt;strong>前言：&lt;/strong> HarmonyOS NEXT的生态建设真是一个巨坑，特别是对于 独立开发者与开源项目 来说，更不用说元服务面对普通应用天然劣势，简直是来自审核和竞品的双重压力。但是怀着不能让新兴平台被粗制滥造的应用所淹没的信念，我还是坚持把这个项目的主要功能完成了，版本号从 v0.1.0 数到了 v1.0.0。
+🎉🎉🎉 &lt;strong>完结撒花&lt;/strong> 🎉🎉🎉&lt;/p>
+&lt;blockquote>
+&lt;p>P.S. 截至本文章发布时，Aigis Authenticator v1.0.0 仍在审核中，虽然早于12月27日上午提交审核，但大概要被拖到2025年了 😅&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="项目简介">&lt;a href="#%e9%a1%b9%e7%9b%ae%e7%ae%80%e4%bb%8b" class="header-anchor">&lt;/a>项目简介
+&lt;/h2>&lt;p>Aigis 是一个服务于 HarmonyOS NEXT 的 2FA 认证元服务，采用纯 ArkTS 实现，无任何三方依赖。&lt;/p>
+&lt;p>Aigis 的目标是成为安卓平台 &lt;a class="link" href="https://github.com/beemdevelopment/Aegis" target="_blank" rel="noopener"
+>Aegis Authenticator&lt;/a> 的轻量级替代品。当前，凭借不到 300KB 的安装包大小，Aigis 已实现了其超过 90% 的功能，且实现了存储数据格式的完整兼容，可以支持加密备份文件的相互导入导出。同时，Aigis 也在设计上做了一些改进，提供了更好的用户体验和数据安全性。&lt;/p>
+&lt;h3 id="开发动机">&lt;a href="#%e5%bc%80%e5%8f%91%e5%8a%a8%e6%9c%ba" class="header-anchor">&lt;/a>开发动机
+&lt;/h3>&lt;p>我在 2024年9月 升级到 HarmonyOS NEXT beta 版本后，被迫放弃了大量安卓软件，以及忍受各种有缺陷的应用功能，但还是发现一个问题不能解决：&lt;strong>没有 &lt;a class="link" href="https://github.com/beemdevelopment/Aegis" target="_blank" rel="noopener"
+>Aegis Authenticator&lt;/a> 的替代品&lt;/strong>。&lt;/p>
+&lt;p>当时的应用市场中，只有一个叫 “手机令牌” 的丑到爆的软件（目前竟然还在更新！还是那么丑！），还不存在同类竞品&lt;del>虽然之后卓易通的上架证明大家都是小丑🤡&lt;/del>。同时，我本来计划开发一个 RetroArch 的鸿蒙前端，&lt;a class="link" href="../retrohos-development-logs-01-migrating-libretro-cores" >Retrohos&lt;/a>，正好积累一下 GUI 的开发经验。于是我在国庆假期期间，快速学习了下 HarmonyOS NEXT 的开发文档，并在 假期结束前 完成了这个项目的核心功能：OTP 计算与展示功能。在于 10月9日 提交备案审核，10月15日 过审后，我于当日上架了 Aigis 的首个测试版本。&lt;/p>
+&lt;h3 id="设计理念">&lt;a href="#%e8%ae%be%e8%ae%a1%e7%90%86%e5%bf%b5" class="header-anchor">&lt;/a>设计理念
+&lt;/h3>&lt;p>Aigis 的主体设计语言参考了原版 &lt;a class="link" href="https://github.com/beemdevelopment/Aegis" target="_blank" rel="noopener"
+>Aegis Authenticator&lt;/a>，同时因为元服务的形态做出了一定调整；主题配色大致参考了Aigis。&lt;/p>
+&lt;p>&lt;img src="https://sudofree.xyz/p/developer-log-aigis-authenticator-for-harmonyos-next/screenshot-preview.png"
+width="2585"
+height="1456"
+srcset="https://sudofree.xyz/p/developer-log-aigis-authenticator-for-harmonyos-next/screenshot-preview_hu14353459484812509928.png 480w, https://sudofree.xyz/p/developer-log-aigis-authenticator-for-harmonyos-next/screenshot-preview_hu3074629423084389773.png 1024w"
+loading="lazy"
+alt="Aegis Preview"
+class="gallery-image"
+data-flex-grow="177"
+data-flex-basis="426px"
+>&lt;/p>
+&lt;p>主页列表条目参考了当前系统应用 &lt;em>邮件&lt;/em> 的设计，编辑页面采用了 &lt;a class="link" href="https://github.com/beemdevelopment/Aegis" target="_blank" rel="noopener"
+>Aegis Authenticator&lt;/a> 的布局方案。设置页项条目参考了系统 &lt;em>设置&lt;/em> 的设计，优先使用了系统提供的组件范式，以保证用户体验的一致性。&lt;/p>
+&lt;p>Aigis Authenticator 在设计中始终把 &lt;strong>安全&lt;/strong> 放在第一位。&lt;/p>
+&lt;p>&lt;img src="https://sudofree.xyz/p/developer-log-aigis-authenticator-for-harmonyos-next/aigis-security-design.png"
+width="1847"
+height="744"
+srcset="https://sudofree.xyz/p/developer-log-aigis-authenticator-for-harmonyos-next/aigis-security-design_hu15700608592237045524.png 480w, https://sudofree.xyz/p/developer-log-aigis-authenticator-for-harmonyos-next/aigis-security-design_hu6614365938437409806.png 1024w"
+loading="lazy"
+alt="Aigis Security Design"
+class="gallery-image"
+data-flex-grow="248"
+data-flex-basis="595px"
+>&lt;/p>
+&lt;p>虽然相较于普通鸿蒙应用，元服务无法使用 Asset Kit 数据存储，系统备份，云同步等API，但这也从原理上保证了元服务的安全性：在没有网络权限的前提下，除非得到用户的许可，用户的数据无法从应用沙箱中逃逸。&lt;/p>
+&lt;p>相对的，在数据存储方面，Aigis 参考 &lt;a class="link" href="https://github.com/beemdevelopment/Aegis" target="_blank" rel="noopener"
+>Aegis Authenticator&lt;/a> 的设计，将条目密钥存储在文件中（用户首选项）。同时，用户需要设置主密钥，并经过经典 PBKDF2 派生算法，生成 AES-256 密钥并保存在可信执行环境（TEE）中，用于条目密钥的加解密使用。&lt;/p>
+&lt;p>在这一数据安全存储的机制下，Aigis 通过以下的一系列安全设计，保证用户对数据的绝对掌控：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>条目/密钥分离存储&lt;/strong>：在用户首选项文件中，条目和密钥分别存储，只对密钥进行加密，实现了 页面渲染效率（仅需条目）和 令牌计算（需要条目+密钥）的安全性 的平衡。在导出备份文件时，条目和密钥分别使用独立的密钥材料加密，进一步提升了数据的安全性。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>加密/解密密钥分离设计&lt;/strong>：得益于 HUKS 的设计，Aigis 将派生的主密钥存储在可信执行环境（TEE）中，并根据用途分为两个密钥：一个用于加密密钥（&lt;code>enc_master_key&lt;/code>），不需要鉴权即可调用；另一个用于解密密钥（&lt;code>dec_master_key&lt;/code>），严格限制在应用中调用，在 v2.0.0 之后支持在 ATL3 级别安全验证之后才可以调用。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>加密JSON文件备份&lt;/strong>：用户在设置主密钥后，可以导出加密的 JSON 格式数据文件，用于备份或者迁移到另一 Aigis 实例中。同时，用户可在 PC 或其他设备上，通过输入主密钥并调用 PBKDF2 算法，自由解密数据文件。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>生物识别解锁&lt;/strong>：Aigis 支持 ATL1 级别的生物识别解锁应用界面，同时允许设置 面部/指纹/PIN码 用于解锁的优先级。与 &lt;a class="link" href="https://github.com/beemdevelopment/Aegis" target="_blank" rel="noopener"
+>Aegis Authenticator&lt;/a> 不同的是，Aigis 在未设置主密钥时也支持启用生物解锁，该情况下您的密钥仍以明文存储在应用沙箱中。从 v2.0.0 开始，Aigis 将支持 ATL3 级别的生物解锁，该安全性将与 &lt;a class="link" href="https://github.com/beemdevelopment/Aegis" target="_blank" rel="noopener"
+>Aegis Authenticator&lt;/a> 生物解锁安全性等价。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>隐私窗口保护&lt;/strong>：Aigis 默认不允许截屏、屏幕录制、任意拖拽内容，以避免可能的个人信息泄露；另一方面，从 v0.8.0 版本开始，用户在设置主密钥后，可以设置禁用隐私窗口保护，以便在需要时截屏。（需要注意的是，在设置主密钥后，条目的二维码分享功能将会被自动禁用）&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="特性一览">&lt;a href="#%e7%89%b9%e6%80%a7%e4%b8%80%e8%a7%88" class="header-anchor">&lt;/a>特性一览
+&lt;/h3>&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>主页面列表，支持条目拖拽排序，搜索，置顶&lt;/strong>&lt;/p>
+&lt;img src="aigis-main-page.png" alt="Main Page" width="60%" />
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>编辑页面支持 二维码分享 条目&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>仅当主密钥未设置时，设置主密钥后，分享功能将被自动禁用&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>通用/外观设置，对齐 &lt;a class="link" href="https://github.com/beemdevelopment/Aegis" target="_blank" rel="noopener"
+>Aegis Authenticator&lt;/a> 界面定制需求&lt;/strong>&lt;/p>
+&lt;img src="settings-general-outlook.png" alt="General &amp; Outlook Settings" width="60%" />
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>支持 Aegis 格式图标包导入&lt;/strong>&lt;/p>
+&lt;img src="settings-icon-pack.png" alt="Icon Pack Import" width="60%" />
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>主密钥设置，密码周期提醒，屏幕安全，生物识别解锁&lt;/strong>&lt;/p>
+&lt;img src="settings-security.png" alt="Security Options" width="60%" />
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>扫码支持 Google Authenticator 二维码导入导出&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>纯 ArkTS 实现 &lt;code>otpauth-migration&lt;/code> payload Protobuf 编解码&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>支持 &lt;a class="link" href="https://github.com/beemdevelopment/Aegis" target="_blank" rel="noopener"
+>Aegis Authenticator&lt;/a> 加密备份文件导入导出&lt;/strong>&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="开发避坑指南">&lt;a href="#%e5%bc%80%e5%8f%91%e9%81%bf%e5%9d%91%e6%8c%87%e5%8d%97" class="header-anchor">&lt;/a>开发避坑指南
+&lt;/h2>&lt;blockquote>
+&lt;p>以下内容仅涉及本人在开发 Aigis 过程中摸索遇到的问题，并不全面，仅供参考。&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="开发文档的获取">&lt;a href="#%e5%bc%80%e5%8f%91%e6%96%87%e6%a1%a3%e7%9a%84%e8%8e%b7%e5%8f%96" class="header-anchor">&lt;/a>开发文档的获取
+&lt;/h3>&lt;p>虽然论坛里很多吐槽开发文档不好查看，查找一个API的用法要跳转好几个页面（事实也确实如此），但是这个开发文档是和 &lt;a class="link" href="https://docs.openharmony.cn/pages/v5.0/zh-cn/application-dev/application-dev-guide.md" target="_blank" rel="noopener"
+>OpenHarmony文档&lt;/a> 保持一致的，所以在查看文档时需要分清主次。&lt;/p>
+&lt;p>首先，&lt;a class="link" href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V5/arkui-overview-V5?catalogVersion=V5" target="_blank" rel="noopener"
+>指南&lt;/a> 和 &lt;a class="link" href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V5/arkui-overview-V5?catalogVersion=V5" target="_blank" rel="noopener"
+>API参考&lt;/a>，这两个和 OpenHarmony 保持一致，随版本号发布（虽然 OpenHarmony 网站只放出了 5.0.0 的文档，但 5.0.1 (API 13) 的文档在 &lt;a class="link" href="https://gitee.com/openharmony/docs/tree/OpenHarmony-5.0.1-Release/" target="_blank" rel="noopener"
+>gitee仓库&lt;/a> 确实是存在的）。&lt;/p>
+&lt;p>其次，&lt;a class="link" href="https://developer.huawei.com/consumer/cn/doc/best-practices-V5/bpta-harmonyos-features-V5?catalogVersion=V5" target="_blank" rel="noopener"
+>最佳实践&lt;/a> 和 &lt;a class="link" href="https://developer.huawei.com/consumer/cn/doc/harmonyos-faqs-V5/faqs-ux-design-V5?catalogVersion=V5" target="_blank" rel="noopener"
+>FAQ&lt;/a>，这两个是 HarmonyOS NEXT 特有的文档，更新频率会高一些（也没高多少），主要是对开发文档的缺失部分做快速的补充，但具体功能的缺陷解决和特性，目前来看还是要等上游 OpenHarmony 发版之后才能同步。另外，&lt;a class="link" href="https://developer.huawei.com/consumer/cn/doc/harmonyos-roadmap-V5/changelogs-pre-V5?catalogVersion=V5" target="_blank" rel="noopener"
+>变更预告&lt;/a> 也有一定用处，但我是看一次失望一次，反正是没修复过我提到的问题。&lt;/p>
+&lt;p>除此之外，在线文档页面的“智能客服”以及全局搜索功能，也有一定用处，但是不要抱太大希望，毕竟现在生态还在建设中，很多问题都是需要自己摸索。&lt;/p>
+&lt;h3 id="备案与软件著作权">&lt;a href="#%e5%a4%87%e6%a1%88%e4%b8%8e%e8%bd%af%e4%bb%b6%e8%91%97%e4%bd%9c%e6%9d%83" class="header-anchor">&lt;/a>备案与软件著作权
+&lt;/h3>&lt;p>&lt;strong>关于备案&lt;/strong>：满足两个条件，单机 + 元服务，就不需要备案了；但是需要内置应用启动时弹出的“用户协议”和“隐私协议”，具体内容请参考现有应用的协议，也可以搜索论坛里的帖子，有人分享过。如果是其他情况，则一定需要备案，建议在应用启动开发时，就开始启动这个流程；这样在应用基本功能完成时，备案也差不多完成审核了。&lt;/p>
+&lt;p>&lt;strong>关于软件著作权&lt;/strong>：元服务不需要软件著作权，应用需要软件著作权，但也可以用电子版权证书代替；不想让代理公司赚钱，可以自己申请，但是时间要长一些。&lt;/p>
+&lt;h3 id="工单系统的重要性">&lt;a href="#%e5%b7%a5%e5%8d%95%e7%b3%bb%e7%bb%9f%e7%9a%84%e9%87%8d%e8%a6%81%e6%80%a7" class="header-anchor">&lt;/a>工单系统的重要性
+&lt;/h3>&lt;p>在开发过程中，遇到疑似 API缺陷/文档缺陷 的问题，首先请在在开发者联盟论坛里搜索一下, 看看有没有人遇到过类似的问题。&lt;/p>
+&lt;p>如果没有的话，建议也不要再发帖了，而是直接在开发者联盟的工单系统里提交工单，这样可以更快的得到官方的回复。&lt;/p>
+&lt;p>虽然工单系统的回复也是千篇一律的客服复制粘贴文档，但如果问题确实存在的话，还是会上升到开发团队的视野里，有可能会得到解决。&lt;/p>
+&lt;p>而如果是关于应用上架遇到问题，则需要在 AppGalley Connect 的“互动中心”提交工单，这样可以更快的得到审核人员的回复。&lt;/p>
+&lt;h3 id="huks-密钥管理与使用">&lt;a href="#huks-%e5%af%86%e9%92%a5%e7%ae%a1%e7%90%86%e4%b8%8e%e4%bd%bf%e7%94%a8" class="header-anchor">&lt;/a>HUKS 密钥管理与使用
+&lt;/h3>&lt;p>HUKS 的文档是存在各种缺陷的，它基于&lt;strong>设备&lt;/strong>提供的 TEE 来实现，能力边界是和设备高度耦合的，但文档上却没体现这一点。直接影响就是，有些API在手机端根本没法用，但他们的测试却没有问题。&lt;/p>
+&lt;p>这里列举下我个人遇到的问题，论坛上的相关讨论是比较少的：&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>测试可用的&lt;/strong>：密钥导入，密钥删除，密钥覆盖创建，AES 相关加解密操作，auth鉴权访问，我这边试过都是没问题的。如有需要的话，可以参考我封装自用的工具类 &lt;a class="link" href="https://github.com/iamhyc/Aigis/blob/master/entry/src/main/ets/crypto/huksUtils.ets" target="_blank" rel="noopener"
+>HUKSUtils&lt;/a>。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>HMAC 方法最好不要用&lt;/strong>，具体来说，也就是不要期待可以在 TEE 里完成基于 SHA1/SHA256 的，非标准密钥长度（256bit 之外）的 HMAC 操作；如果你不信的话，可以写个测试用例试试，如果能用的话也可以告诉我一声 ：）&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>密钥派生方法：强烈建议不要使用！&lt;/strong> 首先，它只有 PBKDF2 派生算法，还不是标准实现！它的派生密钥是不能在其他设备上重复生成的，而是和TEE里的AES密钥及不可控的加密参数相关！鸿蒙使用了私有的派生算法，这个算法的安全性和可靠性都是未知的，不建议使用！&lt;/p>
+&lt;p>考虑到当前 ArkTS 虚拟机对于加密算法的效率问题，推荐使用 openssl 绑定的加密库，如 &lt;a class="link" href="https://ohpm.openharmony.cn/#/cn/detail/@ohos-rs%2Fopenssl" target="_blank" rel="noopener"
+>@ohos-rs/openssl&lt;/a>，或者我手搓了一个 &lt;a class="link" href="https://ohpm.openharmony.cn/#/cn/detail/scrypt" target="_blank" rel="noopener"
+>Scrypt&lt;/a> 密钥派生算法（仅8KB大小）。&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="arkts-虚拟机效率问题">&lt;a href="#arkts-%e8%99%9a%e6%8b%9f%e6%9c%ba%e6%95%88%e7%8e%87%e9%97%ae%e9%a2%98" class="header-anchor">&lt;/a>ArkTS 虚拟机效率问题
+&lt;/h3>&lt;p>正如上面提到的，ArkTS 虚拟机对于加密算法的效率问题，是一个很大的问题。早在API 10的版本，就有人反馈过 &lt;a class="link" href="https://gitee.com/openharmony-sig/ohos_crypto_js/issues/IAS9PA?from=project-issue" target="_blank" rel="noopener"
+>@ohos/crypto-js 加解密卡死&lt;/a> 的问题，但直到目前为止，官方还没有给出解决方案。&lt;/p>
+&lt;p>我曾经在论坛提出这个问题，&lt;a class="link" href="https://developer.huawei.com/consumer/cn/forum/topic/0207168721096647879" target="_blank" rel="noopener"
+>ArkTS 计算密集任务（XOR运算）效率低下&lt;/a>，同时也在工单系统提问，但最后的结论是，必须把相关代码切换到 Native 实现，AOT当前是无法启用的（更不用说JIT）。&lt;/p>
+&lt;p>另一方面，华为也在推广 Cangjie 作为 ArkTS 的接班人，但从我的角度来看，Cangjie 的审美比 TypeScript 或者 Rust 都差远了，而且它的文档也是一团糟，API 也还没有和 ArkTS 保持一致，谁爱用谁用吧 ╮(╯▽╰)╭&lt;/p>
+&lt;h3 id="元服务-native-开发与-native-方法调用">&lt;a href="#%e5%85%83%e6%9c%8d%e5%8a%a1-native-%e5%bc%80%e5%8f%91%e4%b8%8e-native-%e6%96%b9%e6%b3%95%e8%b0%83%e7%94%a8" class="header-anchor">&lt;/a>元服务 Native 开发与 Native 方法调用
+&lt;/h3>&lt;p>元服务是不允许创建 Native Module 的，也就是说不能在 元服务项目 里创建/编译含 Native 代码的 HAR/HSP module。但是，元服务可以通过引用 HAR/HSP 模块，调用 Native 方法 …… 很明显所谓不能创建 Native Module只是 DevEco Studio 的缺陷，元服务的地位之低可见一斑。&lt;/p>
+&lt;p>在元服务里调用 Native 方法，需要注意：对于含有 Native 模块的 HAR/HSP 模块，元服务不能通过 在线 方式引用，而需要把对应的库放在本地，然后通过本地引用的方式来调用，不然会无法找到 NAPI 暴露的方法，报错如：&lt;code>the requested module '@normalized:Y&amp;amp;&amp;amp;&amp;amp;libscrypt.so&amp;amp;' does not provide an export name 'parallelROMix' which imported by '&amp;amp;scrypt/src/main/ets/scrypt&amp;amp;2.0.0'&lt;/code>。
+而神奇的是，对于普通应用，则完全没有这个问题。&lt;/p>
+&lt;p>这个问题我也提过工单了，就是到现在还没人理 😅
+&lt;img src="ticket-native-har.png" alt="工单截图" />&lt;/p>
+&lt;h2 id="心路历程">&lt;a href="#%e5%bf%83%e8%b7%af%e5%8e%86%e7%a8%8b" class="header-anchor">&lt;/a>心路历程
+&lt;/h2>&lt;p>这个吐槽部分放在最后，只是来看技术的读者可以直接跳过。&lt;/p>
+&lt;p>2024年12月31日前，HarmonyOS NEXT的生态进展只有一个主旋律：&lt;strong>冲量&lt;/strong>。&lt;/p>
+&lt;p>&lt;strong>企业开发者方面：&lt;/strong> 先是威逼利诱头部厂商，做出99%的日常应用；然后上架 卓易通/出境易 安卓虚拟机，补齐剩下的小众软件境外软件。&lt;/p>
+&lt;p>&lt;strong>个人开发者方面：&lt;/strong> 开发者激励计划，放出大量红利，吸引大数量应用上架（即使大部分粗制滥造），元服务上架甚至不需要软著和备案；然后再提高门槛，把上车晚的无法引流的垃圾元服务下架，省一点是一点。另一方面，官方的开发者联盟论坛直到今天为止，仍然有大量疑似官方的水军账号大量复制粘贴自导自演的发帖，把正常的虽然比较少的正常开发者的讨论与提问淹没。&lt;/p>
+&lt;p>&lt;strong>消费者方面：&lt;/strong> 先是发放各种合作厂商的会员月卡/季卡，再是直接送钱充话费电费交通卡；最后24年快过去了，API 14 先支持 Nova 12/13 用户升级需求，能拉一点升级率算一点。&lt;/p>
+&lt;p>可以看出，华为的人力和财力，都花在了&lt;strong>在2024年结束前完成 转化率 留存率 活跃度 KPI上&lt;/strong>；至于生态的质量以及后续发展，真不好说这是否算正面的影响。&lt;/p>
+&lt;p>这一切的行为导向，让我在开发这个项目的时候，不断感受到无力与被歧视。首先，API 13/14 的推出，很明显是为了服务头部厂商（比如微信）的反馈（API 13），以及提高用户的升级率的需求（API 14），个人开发者反馈的问题几乎不能得到修复，比如 HUKS 的各种文档缺失以及 ArkTS 的效率低下。&lt;/p>
+&lt;p>其次，元服务的生态地位堪忧，虽然官方一直在强调元服务与普通应用一体两面，能给用户带来更独特的体验，但截至目前为止，元服务简介内容不能被应用市场索引，曾一度&lt;a class="link" href="https://github.com/iamhyc/Aigis/issues/30#issuecomment-2505244270" target="_blank" rel="noopener"
+>被禁止上架公开测试&lt;/a>（一个很好免费的获流渠道直到被垃圾元服务开发者滥用），不能使用鸿蒙碰一碰分享（ShareKit），不能接入意图框架，卡片加桌API存在缺陷不能触发刷新，商店审核被其他应用插队 …… 等等诸多限制，只能看出官方对元服务生态的漠视。
+大概“待到山花烂漫时”，元服务也就算个肥料罢了，真不知道发的 300 块元服务优惠券到底肥了谁的钱包。&lt;/p>
+&lt;p>总而言之，经历了这么多波折，我还是完成了这个项目。等这波撒钱/骗钱的热度过去，再看看鸿蒙生态的未来在哪里吧，至少我现在对它是十分失望的（手持 HUAWEI Pura 70 Pro Plus 光织银 16+512GB 原价购入用户 作答 😅）。&lt;/p></description></item><item><title>Retrohos 开发日志其一: 移植 Libretro Cores</title><link>https://sudofree.xyz/p/retrohos-development-logs-01-migrating-libretro-cores/</link><pubDate>Sat, 07 Sep 2024 22:14:46 +0800</pubDate><guid>https://sudofree.xyz/p/retrohos-development-logs-01-migrating-libretro-cores/</guid><description>&lt;img src="https://sudofree.xyz/p/retrohos-development-logs-01-migrating-libretro-cores/ppsspp-libretro-core.png" alt="Featured image of post Retrohos 开发日志其一: 移植 Libretro Cores" />&lt;p>Retrohos 的目标是作为 OpenHarmony/HarmonyOS 上 RetroArch Frontend 的实现以及完成各社区 Emulator 核心的移植，并同时支持鸿蒙框架关于&lt;strong>分布式应用&lt;/strong>的愿景（如大屏显示同时手机作为手柄的体验）。
+由于本人之前只有粗浅的 Android 移动端开发经验（&lt;a class="link" href="https://github.com/lasso-sustech/AndroidScreenCaster" target="_blank" rel="noopener"
+>通过NDK控制Android投屏&lt;/a>），本日志仅作为应用开发探索过程中的记录，并非最佳实现，仅供参考。&lt;/p>
+&lt;h2 id="什么是-libretro">&lt;a href="#%e4%bb%80%e4%b9%88%e6%98%af-libretro" class="header-anchor">&lt;/a>什么是 Libretro
+&lt;/h2>&lt;p>RetroArch 是一个非常流行的怀旧游戏主机解决方案。它本身并不提供任何仿真器的功能 &lt;del>只是大自然的搬运工&lt;/del>，只是提供了聚合社区仿真器（Emulator Core）的平台，以及一个通用的接入接口定义 &lt;a class="link" href="https://www.libretro.com/index.php/api" target="_blank" rel="noopener"
+>Libretro&lt;/a>。以下简介生成自 ChatGPT :&lt;/p>
+&lt;blockquote>
+&lt;p>Libretro 是一个轻量级的游戏机模拟器核心框架，通过 Libretro API，可以将游戏核心（Core）与前端（Frontend）分离，实现核心的跨平台移植，同时支持多种前端，如 RetroArch、Lakka 等。Libretro 核心是一个动态链接库，通过调用 Libretro API，可以实现游戏核心的初始化、输入输出、音频视频渲染等功能。&lt;/p>
+&lt;/blockquote>
+&lt;p>Libretro 很好地将模拟器的构成区分开来，使得我们可以忽略现有前端的实现（以及各异的GUI技术栈），专注于核心的移植以及与系统的对接。因此 Retrohos 项目的目标是将实现一个兼容 Libretro API 的前端，同时移植社区的 Emulator Core，而非 RetroArch 的完整移植。&lt;/p>
+&lt;h2 id="准备-ndk-环境">&lt;a href="#%e5%87%86%e5%a4%87-ndk-%e7%8e%af%e5%a2%83" class="header-anchor">&lt;/a>准备 NDK 环境
+&lt;/h2>&lt;p>目前关于 OpenHarmony 的开发，本人推荐直接使用 HarmonyOS 商业发行版以及华为提供的开发者内测SDK，而非社区开源的 OpenHarmony 版本；虽然两者目前差异度不大（HarmonyOS Next Beta1 基于 OpenHarmony 5.0.0.xx），但目前唯一可用且成熟的生态环境只有 HarmonyOS，这是一个不得不接受的现状。
+但好在 OpenHarmony NDK 开发与 Android 类似，并不需要依赖官方提供的IDE（DevEco Studio）；以下的开发内容将以命令行工具为基础，在 Linux 平台（Ubuntu 22.04.3 LTS）上进行。&lt;/p>
+&lt;p>以当前最新的官方Linux版本SDK（&lt;code>5.0.0.800&lt;/code>）为例，以下假设 &lt;code>commandline-tools.zip&lt;/code> 压缩包已经下载并解压到 &lt;code>$HOME&lt;/code> 目录下；为了方便区分版本号，将解压后的目录重新命名为 &lt;code>command-line-tools/5.0.0.800&lt;/code>，并在其中创建 &lt;code>env.sh&lt;/code> 文件，内容如下：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#!/bin/bash
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>&lt;span class="nb">export&lt;/span> &lt;span class="nv">OHOS_ROOT&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$HOME&lt;/span>/command-line-tools/5.0.3.800
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">SDK_ROOT&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$OHOS_ROOT&lt;/span>/sdk/default/openharmony
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">## export NDK Path&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">NDK_ROOT&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$SDK_ROOT&lt;/span>/native
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">PATH&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$NDK_ROOT&lt;/span>/build-tools/cmake/bin:&lt;span class="nv">$PATH&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">PATH&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$NDK_ROOT&lt;/span>/llvm/bin:&lt;span class="nv">$PATH&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">## export OHOS command line tools&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">PATH&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$OHOS_ROOT&lt;/span>/tool/node/bin:&lt;span class="nv">$PATH&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">export&lt;/span> &lt;span class="nv">PATH&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$OHOS_ROOT&lt;/span>/bin:&lt;span class="nv">$PATH&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>之后在使用时，只需执行 &lt;code>source env.sh&lt;/code> 即可。该文件主要起到以下作用：&lt;/p>
+&lt;ul>
+&lt;li>设置SDK相关环境变量，这里变量名称没有特殊要求，只是为了方便后续引用；&lt;/li>
+&lt;li>&lt;code>$NDK_ROOT&lt;/code> 指向 NDK 的根目录，方便后续引用编译链工具，以及链接 &lt;code>sysroot&lt;/code>；&lt;/li>
+&lt;li>&lt;code>$PATH&lt;/code> 中前置添加了 &lt;code>cmake&lt;/code> 和 &lt;code>llvm&lt;/code> 的路径，会覆盖掉系统默认的编译工具链， 以确保使用 NDK 提供的工具链。&lt;/li>
+&lt;/ul>
+&lt;p>另外根据&lt;a class="link" href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V5/ndk-development-overview-V5" target="_blank" rel="noopener"
+>官方NDK开发文档&lt;/a>，在调用 NDK 提供的 &lt;code>cmake&lt;/code> 编译时，需要传入以下参数（以 &lt;code>aarch64-linux-ohos&lt;/code> 为例）：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">cmake -DOHOS_STL&lt;span class="o">=&lt;/span>c++_shared -DOHOS_ARCH&lt;span class="o">=&lt;/span>arm64-v8a -DOHOS_PLATFORM&lt;span class="o">=&lt;/span>OHOS -DCMAKE_TOOLCHAIN_FILE&lt;span class="o">=&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">NDK_ROOT&lt;/span>&lt;span class="si">}&lt;/span>/build/cmake/ohos.toolchain.cmake .
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>其中 &lt;code>CMAKE_TOOLCHAIN_FILE&lt;/code> 最为重要，指定了编译链的配置文件，该文件会自动链接 NDK 提供的 &lt;code>sysroot&lt;/code>。&lt;/p>
+&lt;h2 id="移植-libretro-核心">&lt;a href="#%e7%a7%bb%e6%a4%8d-libretro-%e6%a0%b8%e5%bf%83" class="header-anchor">&lt;/a>移植 Libretro 核心
+&lt;/h2>&lt;h3 id="libretro-super-移植尝试">&lt;a href="#libretro-super-%e7%a7%bb%e6%a4%8d%e5%b0%9d%e8%af%95" class="header-anchor">&lt;/a>&lt;code>libretro-super&lt;/code> 移植尝试
+&lt;/h3>&lt;p>&lt;a class="link" href="https://github.com/libretro/libretro-super" target="_blank" rel="noopener"
+>&lt;code>libretro/libretro-super&lt;/code>&lt;/a> 仓库是一个用于管理 Libretro 核心以及 RetroArch 在不同平台编译脚本的管理项目，其按照 &lt;em>target triplet&lt;/em> 标识与组织不同平台下的构建流程。
+最初，我以为 OpenHarmony 底层不过是 Linux kernel 的 &lt;code>aarch64&lt;/code> 架构，工具链中的动态库也都很常见，与 SDK关系不大，因此尝试直接移植这个超级项目。然而可惜的是，由于 &lt;code>ohos&lt;/code> / &lt;code>OHOS&lt;/code> 标识并非众多上游依赖支持的平台，并且它也不会被自动降级到 aarch64 Linux 的构建流程中，暴力移植只会陷入到无限的依赖解决中。&lt;/p>
+&lt;p>因此最合适的解决方案，是仅采用 Libretro Core 的构建流程（逐个 Fork 仓库进行修改😓），抛弃 &lt;code>libretro-super&lt;/code> 这个过于杂乱的项目的整体移植。在本项目的启动阶段，我们聚焦于 ppsspp 核心的移植：它本身提供了 &lt;code>ppsspp-libretro&lt;/code> 的动态库构建选项，三方依赖较少，是第一个成功构建的核心。&lt;/p>
+&lt;h3 id="编译-ppsspp-libretro-核心">&lt;a href="#%e7%bc%96%e8%af%91-ppsspp-libretro-%e6%a0%b8%e5%bf%83" class="header-anchor">&lt;/a>编译 &lt;code>ppsspp-libretro&lt;/code> 核心
+&lt;/h3>&lt;h4 id="ppsspp-ffmpeg-静态库构建">&lt;a href="#ppsspp-ffmpeg-%e9%9d%99%e6%80%81%e5%ba%93%e6%9e%84%e5%bb%ba" class="header-anchor">&lt;/a>&lt;code>ppsspp-ffmpeg&lt;/code> 静态库构建
+&lt;/h4>&lt;p>&lt;a class="link" href="https://github.com/Retrohos/ppsspp" target="_blank" rel="noopener"
+>&lt;code>hrydgard/ppsspp&lt;/code>&lt;/a> 通过 &lt;code>.gitmodules&lt;/code> 引入了多个三方依赖，其中只有其自己维护的 &lt;code>hrydgard/ppsspp-ffmpeg&lt;/code> 需要额外处理 &lt;code>OHOS&lt;/code> 架构字符串的添加，参考 &lt;code>android_arm64_v8a.sh&lt;/code> 并对应添加 &lt;code>ohos_arm64-v8a.sh&lt;/code> 文件内容如下：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt"> 10
+&lt;/span>&lt;span class="lnt"> 11
+&lt;/span>&lt;span class="lnt"> 12
+&lt;/span>&lt;span class="lnt"> 13
+&lt;/span>&lt;span class="lnt"> 14
+&lt;/span>&lt;span class="lnt"> 15
+&lt;/span>&lt;span class="lnt"> 16
+&lt;/span>&lt;span class="lnt"> 17
+&lt;/span>&lt;span class="lnt"> 18
+&lt;/span>&lt;span class="lnt"> 19
+&lt;/span>&lt;span class="lnt"> 20
+&lt;/span>&lt;span class="lnt"> 21
+&lt;/span>&lt;span class="lnt"> 22
+&lt;/span>&lt;span class="lnt"> 23
+&lt;/span>&lt;span class="lnt"> 24
+&lt;/span>&lt;span class="lnt"> 25
+&lt;/span>&lt;span class="lnt"> 26
+&lt;/span>&lt;span class="lnt"> 27
+&lt;/span>&lt;span class="lnt"> 28
+&lt;/span>&lt;span class="lnt"> 29
+&lt;/span>&lt;span class="lnt"> 30
+&lt;/span>&lt;span class="lnt"> 31
+&lt;/span>&lt;span class="lnt"> 32
+&lt;/span>&lt;span class="lnt"> 33
+&lt;/span>&lt;span class="lnt"> 34
+&lt;/span>&lt;span class="lnt"> 35
+&lt;/span>&lt;span class="lnt"> 36
+&lt;/span>&lt;span class="lnt"> 37
+&lt;/span>&lt;span class="lnt"> 38
+&lt;/span>&lt;span class="lnt"> 39
+&lt;/span>&lt;span class="lnt"> 40
+&lt;/span>&lt;span class="lnt"> 41
+&lt;/span>&lt;span class="lnt"> 42
+&lt;/span>&lt;span class="lnt"> 43
+&lt;/span>&lt;span class="lnt"> 44
+&lt;/span>&lt;span class="lnt"> 45
+&lt;/span>&lt;span class="lnt"> 46
+&lt;/span>&lt;span class="lnt"> 47
+&lt;/span>&lt;span class="lnt"> 48
+&lt;/span>&lt;span class="lnt"> 49
+&lt;/span>&lt;span class="lnt"> 50
+&lt;/span>&lt;span class="lnt"> 51
+&lt;/span>&lt;span class="lnt"> 52
+&lt;/span>&lt;span class="lnt"> 53
+&lt;/span>&lt;span class="lnt"> 54
+&lt;/span>&lt;span class="lnt"> 55
+&lt;/span>&lt;span class="lnt"> 56
+&lt;/span>&lt;span class="lnt"> 57
+&lt;/span>&lt;span class="lnt"> 58
+&lt;/span>&lt;span class="lnt"> 59
+&lt;/span>&lt;span class="lnt"> 60
+&lt;/span>&lt;span class="lnt"> 61
+&lt;/span>&lt;span class="lnt"> 62
+&lt;/span>&lt;span class="lnt"> 63
+&lt;/span>&lt;span class="lnt"> 64
+&lt;/span>&lt;span class="lnt"> 65
+&lt;/span>&lt;span class="lnt"> 66
+&lt;/span>&lt;span class="lnt"> 67
+&lt;/span>&lt;span class="lnt"> 68
+&lt;/span>&lt;span class="lnt"> 69
+&lt;/span>&lt;span class="lnt"> 70
+&lt;/span>&lt;span class="lnt"> 71
+&lt;/span>&lt;span class="lnt"> 72
+&lt;/span>&lt;span class="lnt"> 73
+&lt;/span>&lt;span class="lnt"> 74
+&lt;/span>&lt;span class="lnt"> 75
+&lt;/span>&lt;span class="lnt"> 76
+&lt;/span>&lt;span class="lnt"> 77
+&lt;/span>&lt;span class="lnt"> 78
+&lt;/span>&lt;span class="lnt"> 79
+&lt;/span>&lt;span class="lnt"> 80
+&lt;/span>&lt;span class="lnt"> 81
+&lt;/span>&lt;span class="lnt"> 82
+&lt;/span>&lt;span class="lnt"> 83
+&lt;/span>&lt;span class="lnt"> 84
+&lt;/span>&lt;span class="lnt"> 85
+&lt;/span>&lt;span class="lnt"> 86
+&lt;/span>&lt;span class="lnt"> 87
+&lt;/span>&lt;span class="lnt"> 88
+&lt;/span>&lt;span class="lnt"> 89
+&lt;/span>&lt;span class="lnt"> 90
+&lt;/span>&lt;span class="lnt"> 91
+&lt;/span>&lt;span class="lnt"> 92
+&lt;/span>&lt;span class="lnt"> 93
+&lt;/span>&lt;span class="lnt"> 94
+&lt;/span>&lt;span class="lnt"> 95
+&lt;/span>&lt;span class="lnt"> 96
+&lt;/span>&lt;span class="lnt"> 97
+&lt;/span>&lt;span class="lnt"> 98
+&lt;/span>&lt;span class="lnt"> 99
+&lt;/span>&lt;span class="lnt">100
+&lt;/span>&lt;span class="lnt">101
+&lt;/span>&lt;span class="lnt">102
+&lt;/span>&lt;span class="lnt">103
+&lt;/span>&lt;span class="lnt">104
+&lt;/span>&lt;span class="lnt">105
+&lt;/span>&lt;span class="lnt">106
+&lt;/span>&lt;span class="lnt">107
+&lt;/span>&lt;span class="lnt">108
+&lt;/span>&lt;span class="lnt">109
+&lt;/span>&lt;span class="lnt">110
+&lt;/span>&lt;span class="lnt">111
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#!/bin/bash
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> &lt;span class="o">[&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$NDK_ROOT&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span> &lt;span class="o">]&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;Please set NDK_ROOT to your OpenHarmony NDK location.&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">exit&lt;/span> &lt;span class="m">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">NDK_PLATFORM&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;aarch64-linux-ohos&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">NDK_PLATFORM_LIB&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$NDK_ROOT&lt;/span>/sysroot/usr/lib/&lt;span class="nv">$NDK_PLATFORM&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">NDK_PREBUILTLLVM&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$NDK_ROOT&lt;/span>/llvm
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">set&lt;/span> -e
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">GENERAL&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-cross-compile \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-pic \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --cc=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/clang \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --cross-prefix=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/aarch64-unknown-linux-ohos- \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --ar=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/llvm-ar \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --ld=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/clang \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --nm=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/llvm-nm \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --ranlib=&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/llvm-ranlib&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">MODULES&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-avdevice \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-filters \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-programs \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-network \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-avfilter \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-postproc \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-encoders \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-protocols \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-hwaccels \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --disable-doc&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">VIDEO_DECODERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=h264 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=mpeg4 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=mpeg2video \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=mjpeg \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=mjpegb&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">AUDIO_DECODERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=aac \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=aac_latm \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=atrac3 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=atrac3p \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=mp3 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=pcm_s16le \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-decoder=pcm_s8&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">DEMUXERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=h264 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=m4v \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=mpegvideo \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=mpegps \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=mp3 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=avi \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=aac \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=pmp \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=oma \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=pcm_s16le \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=pcm_s8 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-demuxer=wav&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">VIDEO_ENCODERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-encoder=huffyuv
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-encoder=ffv1&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">AUDIO_ENCODERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-encoder=pcm_s16le&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">MUXERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-muxer=avi&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">PARSERS&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=h264 \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=mpeg4video \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=mpegaudio \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=mpegvideo \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=aac \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s2"> --enable-parser=aac_latm&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">function&lt;/span> build_arm64
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># no-missing-prototypes because of a compile error seemingly unique to aarch64.&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">./configure --logfile&lt;span class="o">=&lt;/span>conflog.txt --target-os&lt;span class="o">=&lt;/span>linux &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --prefix&lt;span class="o">=&lt;/span>./ohos/arm64 &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --arch&lt;span class="o">=&lt;/span>aarch64 &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">GENERAL&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --extra-cflags&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34; --target=aarch64-linux-ohos -no-canonical-prefixes -fdata-sections -ffunction-sections -fno-limit-debug-info -funwind-tables -fPIC -O2 -DOHOS -DOHOS_ARCH=arm64-v8a -DOHOS_PLATFORM=OHOS -DCMAKE_TOOLCHAIN_FILE=&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">NDK_ROOT&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">/build/cmake/ohos.toolchain.cmake -Dipv6mr_interface=ipv6mr_ifindex -fasm -fno-short-enums -fno-strict-aliasing -Wno-missing-prototypes&amp;#34;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --disable-shared &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --enable-static &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --extra-ldflags&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34; -B&lt;/span>&lt;span class="nv">$NDK_PREBUILTLLVM&lt;/span>&lt;span class="s2">/bin/aarch64-unknown-linux-ohos- --target=aarch64-linux-ohos -Wl,--rpath-link,&lt;/span>&lt;span class="nv">$NDK_PLATFORM_LIB&lt;/span>&lt;span class="s2"> -L&lt;/span>&lt;span class="nv">$NDK_PLATFORM_LIB&lt;/span>&lt;span class="s2"> -nostdlib -lc -lm -ldl&amp;#34;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --enable-zlib &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --disable-everything &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">MODULES&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">VIDEO_DECODERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">AUDIO_DECODERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">VIDEO_ENCODERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">AUDIO_ENCODERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">DEMUXERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">MUXERS&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> &lt;span class="si">${&lt;/span>&lt;span class="nv">PARSERS&lt;/span>&lt;span class="si">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">make clean
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">make -j4 install
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">build_arm64
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>通过之前提到的 &lt;code>source env.sh&lt;/code> 准备好 NDK 环境后，随后执行该构建脚本，在 &lt;code>ohos/arm64&lt;/code> 下生成 &lt;code>libavcodec.a&lt;/code> 等静态库文件，以及 &lt;code>include&lt;/code> 目录下的头文件。
+提交相关更改后，即可在 &lt;code>ppsspp-libretro&lt;/code> 中将 submodule 指向我们修改后的仓库 &lt;a class="link" href="https://github.com/Retrohos/ppsspp-ffmpeg.git" target="_blank" rel="noopener"
+>&lt;code>Retrohos/ppsspp-ffmpeg&lt;/code>&lt;/a>.&lt;/p>
+&lt;h4 id="ppsspp-构建">&lt;a href="#ppsspp-%e6%9e%84%e5%bb%ba" class="header-anchor">&lt;/a>&lt;code>ppsspp&lt;/code> 构建
+&lt;/h4>&lt;p>&lt;code>ppsspp-libretro&lt;/code> 本身的移植较为简单，只需要在 &lt;code>CMakeLists.txt&lt;/code> 中添加 OHOS 架构的判断，以及修改 &lt;code>CMakeLists.txt&lt;/code> 中的编译选项，patch 内容如下：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;span class="lnt">45
+&lt;/span>&lt;span class="lnt">46
+&lt;/span>&lt;span class="lnt">47
+&lt;/span>&lt;span class="lnt">48
+&lt;/span>&lt;span class="lnt">49
+&lt;/span>&lt;span class="lnt">50
+&lt;/span>&lt;span class="lnt">51
+&lt;/span>&lt;span class="lnt">52
+&lt;/span>&lt;span class="lnt">53
+&lt;/span>&lt;span class="lnt">54
+&lt;/span>&lt;span class="lnt">55
+&lt;/span>&lt;span class="lnt">56
+&lt;/span>&lt;span class="lnt">57
+&lt;/span>&lt;span class="lnt">58
+&lt;/span>&lt;span class="lnt">59
+&lt;/span>&lt;span class="lnt">60
+&lt;/span>&lt;span class="lnt">61
+&lt;/span>&lt;span class="lnt">62
+&lt;/span>&lt;span class="lnt">63
+&lt;/span>&lt;span class="lnt">64
+&lt;/span>&lt;span class="lnt">65
+&lt;/span>&lt;span class="lnt">66
+&lt;/span>&lt;span class="lnt">67
+&lt;/span>&lt;span class="lnt">68
+&lt;/span>&lt;span class="lnt">69
+&lt;/span>&lt;span class="lnt">70
+&lt;/span>&lt;span class="lnt">71
+&lt;/span>&lt;span class="lnt">72
+&lt;/span>&lt;span class="lnt">73
+&lt;/span>&lt;span class="lnt">74
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-diff" data-lang="diff">&lt;span class="line">&lt;span class="cl">&lt;span class="gh">diff --git a/CMakeLists.txt b/CMakeLists.txt
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gh">index ad2be076b..2fe1e619c 100644
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gh">&lt;/span>&lt;span class="gd">--- a/CMakeLists.txt
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+++ b/CMakeLists.txt
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span>&lt;span class="gu">@@ -99,8 +99,12 @@ if(${CMAKE_SYSTEM_NAME} MATCHES &amp;#34;Android&amp;#34;)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> set(ANDROID ON)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+if(${CMAKE_SYSTEM_NAME} MATCHES &amp;#34;OHOS&amp;#34;)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ set(OHOS ON)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+endif()
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> # We only support Vulkan on Unix, macOS (by MoltenVK), Android and Windows.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">-if(ANDROID OR WIN32 OR (UNIX AND NOT ARM_NO_VULKAN))
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+if(OHOS OR ANDROID OR WIN32 OR (UNIX AND NOT ARM_NO_VULKAN))
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> set(VULKAN ON)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -192,7 +196,7 @@ if(USE_CCACHE)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> include(ccache)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">-if(UNIX AND NOT (APPLE OR ANDROID) AND VULKAN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+if(UNIX AND NOT (APPLE OR ANDROID OR OHOS) AND VULKAN)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> if(USING_X11_VULKAN)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> message(&amp;#34;Using X11 for Vulkan&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> find_package(X11)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -225,7 +229,7 @@ if(LIBRETRO)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">-if(ANDROID)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+if(ANDROID OR OHOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> set(MOBILE_DEVICE ON)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> set(USING_GLES2 ON)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -382,7 +386,7 @@ if(NOT MSVC)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> # NEON optimizations in libpng17 seem to cause PNG load errors, see #14485.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> add_definitions(-DPNG_ARM_NEON_OPT=0)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- if(ANDROID)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+ if(ANDROID OR OHOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> set(CMAKE_CXX_FLAGS &amp;#34;${CMAKE_CXX_FLAGS} -std=gnu++17&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> if(CLANG)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -474,7 +478,7 @@ if(NOT MSVC)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> if(${CMAKE_SYSTEM_NAME} STREQUAL &amp;#34;NetBSD&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> add_definitions(-D_NETBSD_SOURCE)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- elseif(ANDROID)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+ elseif(ANDROID OR OHOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> add_definitions(-fsigned-char)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> else()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -943,6 +947,10 @@ if(USE_FFMPEG)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> elseif(X86)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> set(PLATFORM_ARCH &amp;#34;android/x86&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ elseif(OHOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ if(ARM64)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ set(PLATFORM_ARCH &amp;#34;ohos/arm64&amp;#34;)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ endif()
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> elseif(IOS)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> if(IOS_PLATFORM STREQUAL &amp;#34;TVOS&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> set(PLATFORM_ARCH &amp;#34;tvos/arm64&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -1200,7 +1208,7 @@ else()
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> endif()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> # Arm platforms require at least libpng17.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">-if(ANDROID OR ARMV7 OR ARM64 OR ARM OR IOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+if(OHOS OR ANDROID OR ARMV7 OR ARM64 OR ARM OR IOS)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> set(PNG_REQUIRED_VERSION 1.7)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> else()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> set(PNG_REQUIRED_VERSION 1.6)
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>修改完成后执行&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">cmake -DOHOS_STL&lt;span class="o">=&lt;/span>c++_shared -DOHOS_ARCH&lt;span class="o">=&lt;/span>arm64-v8a -DOHOS_PLATFORM&lt;span class="o">=&lt;/span>OHOS -DCMAKE_TOOLCHAIN_FILE&lt;span class="o">=&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">NDK_ROOT&lt;/span>&lt;span class="si">}&lt;/span>/build/cmake/ohos.toolchain.cmake -DLIBRETRO&lt;span class="o">=&lt;/span>ON -DUSING_EGL&lt;span class="o">=&lt;/span>ON -DUSING_GLES2&lt;span class="o">=&lt;/span>ON . -Bbuild
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>创建 &lt;code>build&lt;/code> 目录，并在其中执行 &lt;code>make -j4&lt;/code> 即可生成 &lt;code>lib/ppsspp_libretro.so&lt;/code> 文件。&lt;/p>
+&lt;h2 id="后续计划">&lt;a href="#%e5%90%8e%e7%bb%ad%e8%ae%a1%e5%88%92" class="header-anchor">&lt;/a>后续计划
+&lt;/h2>&lt;p>作为项目的启动阶段，一个核心的移植已经足够我们进行后续的前端开发。接下来计划先设计一个简单的 Libretro 前端，并通过 ArkTS NAPI 进行绑定调用，快速实现 framebuffer 的输出。至于更为重要的 GUI 设计，可以再等等 DevEco Studio 开发套件的完善(～o￣3￣)～&lt;/p></description></item><item><title>解决 Gaussian Splatting 原始实现中的内存泄漏问题</title><link>https://sudofree.xyz/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/</link><pubDate>Mon, 02 Sep 2024 15:43:01 +0800</pubDate><guid>https://sudofree.xyz/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/</guid><description>&lt;img src="https://sudofree.xyz/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak.png" alt="Featured image of post 解决 Gaussian Splatting 原始实现中的内存泄漏问题" />&lt;blockquote>
+&lt;p>以下内容使用 &lt;a class="link" href="deel.com" >deepl.com&lt;/a> 机翻辅助，如有不适请参考英文版本。&lt;/p>
+&lt;/blockquote>
+&lt;p>我很奇怪为什么没有人发现这个内存泄漏问题。也许是我太懒了，没有在网上翻到。
+总之，我发现在原始实现中存在明显的内存泄漏问题（其源代码可在 &lt;a class="link" href="https://github.com/graphdeco-inria/gaussian-splatting" target="_blank" rel="noopener"
+>Github&lt;/a> 上获取）。&lt;/p>
+&lt;p>我在加载一个大型数据集时发现了这个问题，该数据集包含约 600 的图像和 400 万的点云数据，这些图像和点是通过精确的几何映射收集的。训练时占用了NVIDIA RTX 3090 GPU 20GB 以上的显存，同时还占用了 15GB 以上的内存。虽然场景确实很大，但我很好奇为什么一开始就占用了所有内存，而不是在训练过程中逐渐增加！&lt;/p>
+&lt;h2 id="第一个补丁---延迟加载">&lt;a href="#%e7%ac%ac%e4%b8%80%e4%b8%aa%e8%a1%a5%e4%b8%81---%e5%bb%b6%e8%bf%9f%e5%8a%a0%e8%bd%bd" class="header-anchor">&lt;/a>第一个补丁 - 延迟加载
+&lt;/h2>&lt;p>首先，我找出了 CPU 占用大量内存（即 RAM 占用）的原因：一开始，所有图像的都在 RAM 中被加载，并在 GPU 上创建了相应的张量。相关源代码见 &lt;a class="link" href="https://github.com/graphdeco-inria/gaussian-splatting/blob/main/utils/camera_utils.py#L20" target="_blank" rel="noopener"
+>&lt;code>utils/camera_utils.py#L20&lt;/code>&lt;/a>：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;span class="lnt">7
+&lt;/span>&lt;span class="lnt">8
+&lt;/span>&lt;span class="lnt">9
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-python" data-lang="python">&lt;span class="line">&lt;span class="cl">&lt;span class="k">def&lt;/span> &lt;span class="nf">loadCam&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">args&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">id&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">cam_info&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">resolution_scale&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">is_test_dataset&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">...&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">Camera&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">resolution&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">colmap_id&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">cam_info&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">uid&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">R&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">cam_info&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">R&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">T&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">cam_info&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">T&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">FoVx&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">cam_info&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">FovX&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">FoVy&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">cam_info&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">FovY&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">depth_params&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">cam_info&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">depth_params&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">image&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">image&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">invdepthmap&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">invdepthmap&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">image_name&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">cam_info&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">image_name&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">uid&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nb">id&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">data_device&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">args&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">data_device&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">train_test_exp&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">args&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">train_test_exp&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">is_test_dataset&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">is_test_dataset&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">is_test_view&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="n">cam_info&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">is_test&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>我的直接想法是进行权衡：图像加载时间可能不值得消耗这么多内存，尤其是考虑到后续的巨大训练负担。
+因此，我编写了一个 &lt;code>LazyLoader&lt;/code> 类，将 &lt;code>Camera&lt;/code> 类的实例化延迟到第一次引用。实现示例如下：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-python" data-lang="python">&lt;span class="line">&lt;span class="cl">&lt;span class="kn">from&lt;/span> &lt;span class="nn">scene.cameras&lt;/span> &lt;span class="kn">import&lt;/span> &lt;span class="n">Camera&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">class&lt;/span> &lt;span class="nc">LazyLoader&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">def&lt;/span> &lt;span class="fm">__init__&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="bp">cls&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">args&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">**&lt;/span>&lt;span class="n">kwargs&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">cls&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="bp">cls&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">args&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">args&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">kwargs&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">kwargs&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">instance&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">None&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">def&lt;/span> &lt;span class="fm">__getattribute__&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">name&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="nb">str&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">name&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;cls&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;args&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;kwargs&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;instance&amp;#39;&lt;/span>&lt;span class="p">]:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nb">super&lt;/span>&lt;span class="p">()&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="fm">__getattribute__&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">name&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">else&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="ow">not&lt;/span> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">instance&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">instance&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">cls&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">args&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">**&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">kwargs&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nb">getattr&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">instance&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">name&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">def&lt;/span> &lt;span class="fm">__del__&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="bp">self&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">instance&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">del&lt;/span> &lt;span class="bp">self&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">instance&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>因此，&lt;code>Camera&lt;/code> 类构建的原始引用修改为&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-diff" data-lang="diff">&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T,
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+ return LazyLoader(Camera, colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T,
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>在 &lt;code>train.py&lt;/code> 中的主训练循环中使用后，图像会被立即删除，直到下一次使用再被创建。&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-diff" data-lang="diff">&lt;span class="line">&lt;span class="cl"> # Loss
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> gt_image = viewpoint_cam.original_image.cuda()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ del viewpoint_cam
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> Ll1 = l1_loss(image, gt_image)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> loss.backward()
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>然而，奇怪的是，内存使用量在开始时确实是可以接受的，图像会按照预期逐个加载。但最后却增加到了 20GB 以上，之后从未减少过。所以我意识到真正的问题是内存泄漏。&lt;/p>
+&lt;h2 id="第二个补丁---内存泄漏修复">&lt;a href="#%e7%ac%ac%e4%ba%8c%e4%b8%aa%e8%a1%a5%e4%b8%81---%e5%86%85%e5%ad%98%e6%b3%84%e6%bc%8f%e4%bf%ae%e5%a4%8d" class="header-anchor">&lt;/a>第二个补丁 - 内存泄漏修复
+&lt;/h2>&lt;p>这里的内存泄漏非常令人困惑。正如我之前提到的，我在 Python 中使用 &lt;code>del&lt;/code> 来删除对 &lt;code>Camera&lt;/code> 类的引用，所有的内存应该同时被清除。我试图到处寻找原因，但只发现它与 PyTorch 有关。由于无法深入研究 CUDA 张量，我开始尝试在 Python 代码中的 &lt;code>del&lt;/code> 所有相关内容。幸运的是，它成功了。&lt;/p>
+&lt;p>补丁可分为两部分。第一部分是继续提高图像加载的效率：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt"> 10
+&lt;/span>&lt;span class="lnt"> 11
+&lt;/span>&lt;span class="lnt"> 12
+&lt;/span>&lt;span class="lnt"> 13
+&lt;/span>&lt;span class="lnt"> 14
+&lt;/span>&lt;span class="lnt"> 15
+&lt;/span>&lt;span class="lnt"> 16
+&lt;/span>&lt;span class="lnt"> 17
+&lt;/span>&lt;span class="lnt"> 18
+&lt;/span>&lt;span class="lnt"> 19
+&lt;/span>&lt;span class="lnt"> 20
+&lt;/span>&lt;span class="lnt"> 21
+&lt;/span>&lt;span class="lnt"> 22
+&lt;/span>&lt;span class="lnt"> 23
+&lt;/span>&lt;span class="lnt"> 24
+&lt;/span>&lt;span class="lnt"> 25
+&lt;/span>&lt;span class="lnt"> 26
+&lt;/span>&lt;span class="lnt"> 27
+&lt;/span>&lt;span class="lnt"> 28
+&lt;/span>&lt;span class="lnt"> 29
+&lt;/span>&lt;span class="lnt"> 30
+&lt;/span>&lt;span class="lnt"> 31
+&lt;/span>&lt;span class="lnt"> 32
+&lt;/span>&lt;span class="lnt"> 33
+&lt;/span>&lt;span class="lnt"> 34
+&lt;/span>&lt;span class="lnt"> 35
+&lt;/span>&lt;span class="lnt"> 36
+&lt;/span>&lt;span class="lnt"> 37
+&lt;/span>&lt;span class="lnt"> 38
+&lt;/span>&lt;span class="lnt"> 39
+&lt;/span>&lt;span class="lnt"> 40
+&lt;/span>&lt;span class="lnt"> 41
+&lt;/span>&lt;span class="lnt"> 42
+&lt;/span>&lt;span class="lnt"> 43
+&lt;/span>&lt;span class="lnt"> 44
+&lt;/span>&lt;span class="lnt"> 45
+&lt;/span>&lt;span class="lnt"> 46
+&lt;/span>&lt;span class="lnt"> 47
+&lt;/span>&lt;span class="lnt"> 48
+&lt;/span>&lt;span class="lnt"> 49
+&lt;/span>&lt;span class="lnt"> 50
+&lt;/span>&lt;span class="lnt"> 51
+&lt;/span>&lt;span class="lnt"> 52
+&lt;/span>&lt;span class="lnt"> 53
+&lt;/span>&lt;span class="lnt"> 54
+&lt;/span>&lt;span class="lnt"> 55
+&lt;/span>&lt;span class="lnt"> 56
+&lt;/span>&lt;span class="lnt"> 57
+&lt;/span>&lt;span class="lnt"> 58
+&lt;/span>&lt;span class="lnt"> 59
+&lt;/span>&lt;span class="lnt"> 60
+&lt;/span>&lt;span class="lnt"> 61
+&lt;/span>&lt;span class="lnt"> 62
+&lt;/span>&lt;span class="lnt"> 63
+&lt;/span>&lt;span class="lnt"> 64
+&lt;/span>&lt;span class="lnt"> 65
+&lt;/span>&lt;span class="lnt"> 66
+&lt;/span>&lt;span class="lnt"> 67
+&lt;/span>&lt;span class="lnt"> 68
+&lt;/span>&lt;span class="lnt"> 69
+&lt;/span>&lt;span class="lnt"> 70
+&lt;/span>&lt;span class="lnt"> 71
+&lt;/span>&lt;span class="lnt"> 72
+&lt;/span>&lt;span class="lnt"> 73
+&lt;/span>&lt;span class="lnt"> 74
+&lt;/span>&lt;span class="lnt"> 75
+&lt;/span>&lt;span class="lnt"> 76
+&lt;/span>&lt;span class="lnt"> 77
+&lt;/span>&lt;span class="lnt"> 78
+&lt;/span>&lt;span class="lnt"> 79
+&lt;/span>&lt;span class="lnt"> 80
+&lt;/span>&lt;span class="lnt"> 81
+&lt;/span>&lt;span class="lnt"> 82
+&lt;/span>&lt;span class="lnt"> 83
+&lt;/span>&lt;span class="lnt"> 84
+&lt;/span>&lt;span class="lnt"> 85
+&lt;/span>&lt;span class="lnt"> 86
+&lt;/span>&lt;span class="lnt"> 87
+&lt;/span>&lt;span class="lnt"> 88
+&lt;/span>&lt;span class="lnt"> 89
+&lt;/span>&lt;span class="lnt"> 90
+&lt;/span>&lt;span class="lnt"> 91
+&lt;/span>&lt;span class="lnt"> 92
+&lt;/span>&lt;span class="lnt"> 93
+&lt;/span>&lt;span class="lnt"> 94
+&lt;/span>&lt;span class="lnt"> 95
+&lt;/span>&lt;span class="lnt"> 96
+&lt;/span>&lt;span class="lnt"> 97
+&lt;/span>&lt;span class="lnt"> 98
+&lt;/span>&lt;span class="lnt"> 99
+&lt;/span>&lt;span class="lnt">100
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-diff" data-lang="diff">&lt;span class="line">&lt;span class="cl">&lt;span class="gh">diff --git a/scene/__init__.py b/scene/__init__.py
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gh">&lt;/span>&lt;span class="gd">--- a/scene/__init__.py
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+++ b/scene/__init__.py
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span>&lt;span class="gu">@@ -37,9 +37,6 @@ class Scene:
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> self.loaded_iter = load_iteration
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> print(&amp;#34;Loading trained model at iteration {}&amp;#34;.format(self.loaded_iter))
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- self.train_cameras = {}
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- self.test_cameras = {}
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">-
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span> if os.path.exists(os.path.join(args.source_path, &amp;#34;sparse&amp;#34;)):
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> scene_info = sceneLoadTypeCallbacks[&amp;#34;Colmap&amp;#34;](args.source_path, args.images, args.eval)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> elif os.path.exists(os.path.join(args.source_path, &amp;#34;transforms_train.json&amp;#34;)):
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -67,12 +64,8 @@ class Scene:
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> random.shuffle(scene_info.test_cameras) # Multi-res consistent random shuffling
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> self.cameras_extent = scene_info.nerf_normalization[&amp;#34;radius&amp;#34;]
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">-
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- for resolution_scale in resolution_scales:
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- print(&amp;#34;Loading Training Cameras&amp;#34;)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- self.train_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.train_cameras, resolution_scale, args)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- print(&amp;#34;Loading Test Cameras&amp;#34;)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- self.test_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.test_cameras, resolution_scale, args)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+ self.scene_info = scene_info
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ self.args = args
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> if self.loaded_iter:
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> self.gaussians.load_ply(os.path.join(self.model_path,
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -87,7 +80,7 @@ class Scene:
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> self.gaussians.save_ply(os.path.join(point_cloud_path, &amp;#34;point_cloud.ply&amp;#34;))
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> def getTrainCameras(self, scale=1.0):
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- return self.train_cameras[scale]
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+ return cameraList_from_camInfos(self.scene_info.train_cameras, scale, self.args)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> def getTestCameras(self, scale=1.0):
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- return self.test_cameras[scale]
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>\ No newline at end of file
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ return cameraList_from_camInfos(self.scene_info.test_cameras, scale, self.args)
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span>\ No newline at end of file
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gh">diff --git a/scene/cameras.py b/scene/cameras.py
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gh">&lt;/span>&lt;span class="gd">--- a/scene/cameras.py
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+++ b/scene/cameras.py
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span>&lt;span class="gu">@@ -17,6 +17,7 @@ from utils.graphics_utils import getWorld2View2, getProjectionMatrix
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> class Camera(nn.Module):
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask,
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> image_name, uid,
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ raw_image=None,
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = &amp;#34;cuda&amp;#34;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> ):
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> super(Camera, self).__init__()
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -29,6 +30,14 @@ class Camera(nn.Module):
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> self.FoVy = FoVy
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> self.image_name = image_name
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ if raw_image is not None:
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ image = raw_image[:3, ...]
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ gt_alpha_mask = None
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ if raw_image.shape[1] == 4:
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ gt_alpha_mask = raw_image[3:4, ...]
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ del raw_image
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> try:
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> self.data_device = torch.device(data_device)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> except Exception as e:
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -39,9 +48,11 @@ class Camera(nn.Module):
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> self.original_image = image.clamp(0.0, 1.0).to(self.data_device)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> self.image_width = self.original_image.shape[2]
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> self.image_height = self.original_image.shape[1]
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ del image
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> if gt_alpha_mask is not None:
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> self.original_image *= gt_alpha_mask.to(self.data_device)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ del gt_alpha_mask
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> else:
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> self.original_image *= torch.ones((1, self.image_height, self.image_width), device=self.data_device)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">@@ -56,6 +67,9 @@ class Camera(nn.Module):
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> self.camera_center = self.world_view_transform.inverse()[3, :3]
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ def __del__(self):
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+ del self.original_image, self.world_view_transform, self.projection_matrix, self.full_proj_transform, self.camera_center
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">+
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> class MiniCam:
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> def __init__(self, width, height, fovy, fovx, znear, zfar, world_view_transform, full_proj_transform):
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> self.image_width = width
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gh">diff --git a/train.py b/train.py
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gh">&lt;/span>&lt;span class="gd">--- a/train.py
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+++ b/train.py
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span>&lt;span class="gu">@@ -44,103 +43,82 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gu">&lt;/span> iter_start = torch.cuda.Event(enable_timing = True)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> iter_end = torch.cuda.Event(enable_timing = True)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- viewpoint_stack = None
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+ viewpoint_stack = scene.getTrainCameras()
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gi">&lt;/span> ema_loss_for_log = 0.0
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> progress_bar = tqdm(range(first_iter, opt.iterations), desc=&amp;#34;Training progress&amp;#34;)
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> first_iter += 1
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>第二部分是在主训练循环中使用 &lt;code>del&lt;/code>。因为我对训练过程做了其他修改，因此无法在此给出完整的补丁。缩减版如下。&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;span class="lnt">40
+&lt;/span>&lt;span class="lnt">41
+&lt;/span>&lt;span class="lnt">42
+&lt;/span>&lt;span class="lnt">43
+&lt;/span>&lt;span class="lnt">44
+&lt;/span>&lt;span class="lnt">45
+&lt;/span>&lt;span class="lnt">46
+&lt;/span>&lt;span class="lnt">47
+&lt;/span>&lt;span class="lnt">48
+&lt;/span>&lt;span class="lnt">49
+&lt;/span>&lt;span class="lnt">50
+&lt;/span>&lt;span class="lnt">51
+&lt;/span>&lt;span class="lnt">52
+&lt;/span>&lt;span class="lnt">53
+&lt;/span>&lt;span class="lnt">54
+&lt;/span>&lt;span class="lnt">55
+&lt;/span>&lt;span class="lnt">56
+&lt;/span>&lt;span class="lnt">57
+&lt;/span>&lt;span class="lnt">58
+&lt;/span>&lt;span class="lnt">59
+&lt;/span>&lt;span class="lnt">60
+&lt;/span>&lt;span class="lnt">61
+&lt;/span>&lt;span class="lnt">62
+&lt;/span>&lt;span class="lnt">63
+&lt;/span>&lt;span class="lnt">64
+&lt;/span>&lt;span class="lnt">65
+&lt;/span>&lt;span class="lnt">66
+&lt;/span>&lt;span class="lnt">67
+&lt;/span>&lt;span class="lnt">68
+&lt;/span>&lt;span class="lnt">69
+&lt;/span>&lt;span class="lnt">70
+&lt;/span>&lt;span class="lnt">71
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-python" data-lang="python">&lt;span class="line">&lt;span class="cl">&lt;span class="k">for&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="nb">range&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">first_iter&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">iterations&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mi">1&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">iter_start&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">record&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">gaussians&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">update_learning_rate&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">iteration&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># Every 1000 its we increase the levels of SH up to a maximum degree&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="o">%&lt;/span> &lt;span class="mi">1000&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">gaussians&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">oneupSHdegree&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># Pick a random Camera&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">viewpoint_stack&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">==&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">del&lt;/span> &lt;span class="n">viewpoint_stack&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">viewpoint_stack&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">scene&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">getTrainCameras&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">viewpoint_cam&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">viewpoint_stack&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">pop&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">randint&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">len&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">viewpoint_stack&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># Render&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">iteration&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="mi">1&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="n">debug_from&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">pipe&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">debug&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">True&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">bg&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">torch&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">rand&lt;/span>&lt;span class="p">((&lt;/span>&lt;span class="mi">3&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="n">device&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;cuda&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="k">if&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">random_background&lt;/span> &lt;span class="k">else&lt;/span> &lt;span class="n">background&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">render_pkg&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">render&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">viewpoint_cam&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">gaussians&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">pipe&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">bg&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">image&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">viewspace_point_tensor&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">visibility_filter&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">radii&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">render_pkg&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;render&amp;#34;&lt;/span>&lt;span class="p">],&lt;/span> &lt;span class="n">render_pkg&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;viewspace_points&amp;#34;&lt;/span>&lt;span class="p">],&lt;/span> &lt;span class="n">render_pkg&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;visibility_filter&amp;#34;&lt;/span>&lt;span class="p">],&lt;/span> &lt;span class="n">render_pkg&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;radii&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># Loss&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">gt_image&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">viewpoint_cam&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">original_image&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">cuda&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">Ll1&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">l1_loss&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">image&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">gt_image&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">loss&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="mf">1.0&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">lambda_dssim&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="n">Ll1&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">lambda_dssim&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="mf">1.0&lt;/span> &lt;span class="o">-&lt;/span> &lt;span class="n">ssim&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">image&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">gt_image&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">loss&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">backward&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">iter_end&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">record&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">with&lt;/span> &lt;span class="n">torch&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">no_grad&lt;/span>&lt;span class="p">():&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># Progress bar&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ema_loss_for_log&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mf">0.4&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="n">loss&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">item&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="mf">0.6&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="n">ema_loss_for_log&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="o">%&lt;/span> &lt;span class="mi">10&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">progress_bar&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">set_postfix&lt;/span>&lt;span class="p">({&lt;/span>&lt;span class="s2">&amp;#34;Loss&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="sa">f&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="si">{&lt;/span>&lt;span class="n">ema_loss_for_log&lt;/span>&lt;span class="si">:&lt;/span>&lt;span class="s2">.&lt;/span>&lt;span class="si">{&lt;/span>&lt;span class="mi">7&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">f&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">progress_bar&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">update&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">10&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">iterations&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">progress_bar&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">close&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># Log and save&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">torch&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">cuda&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">empty_cache&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">iteration&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">saving_iterations&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s2">[ITER &lt;/span>&lt;span class="si">{}&lt;/span>&lt;span class="s2">] Saving Gaussians&amp;#34;&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">format&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">iteration&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">scene&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">save&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">iteration&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># Densification&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">densify_until_iter&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># Keep track of max radii in image-space for pruning&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">gaussians&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">max_radii2D&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">visibility_filter&lt;/span>&lt;span class="p">]&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">torch&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">max&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">gaussians&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">max_radii2D&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">visibility_filter&lt;/span>&lt;span class="p">],&lt;/span> &lt;span class="n">radii&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="n">visibility_filter&lt;/span>&lt;span class="p">])&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">gaussians&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">add_densification_stats&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">viewspace_point_tensor&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">visibility_filter&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="o">&amp;gt;&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">densify_from_iter&lt;/span> &lt;span class="ow">and&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="o">%&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">densification_interval&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">size_threshold&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">20&lt;/span> &lt;span class="k">if&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="o">&amp;gt;&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">opacity_reset_interval&lt;/span> &lt;span class="k">else&lt;/span> &lt;span class="kc">None&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">gaussians&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">densify_and_prune&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">densify_grad_threshold&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="mf">0.005&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">scene&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">cameras_extent&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">size_threshold&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="o">%&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">opacity_reset_interval&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="mi">0&lt;/span> &lt;span class="ow">or&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">dataset&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">white_background&lt;/span> &lt;span class="ow">and&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">densify_from_iter&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">gaussians&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">reset_opacity&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1"># Optimizer step&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="n">iteration&lt;/span> &lt;span class="o">&amp;lt;&lt;/span> &lt;span class="n">opt&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">iterations&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">gaussians&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">optimizer&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">step&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">gaussians&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">optimizer&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">zero_grad&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">set_to_none&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kc">True&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">iteration&lt;/span> &lt;span class="ow">in&lt;/span> &lt;span class="n">checkpoint_iterations&lt;/span>&lt;span class="p">):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="se">\n&lt;/span>&lt;span class="s2">[ITER &lt;/span>&lt;span class="si">{}&lt;/span>&lt;span class="s2">] Saving Checkpoint&amp;#34;&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">format&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">iteration&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">torch&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">save&lt;/span>&lt;span class="p">((&lt;/span>&lt;span class="n">gaussians&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">capture&lt;/span>&lt;span class="p">(),&lt;/span> &lt;span class="n">iteration&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="n">scene&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">model_path&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="s2">&amp;#34;/chkpnt&amp;#34;&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="nb">str&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">iteration&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="s2">&amp;#34;.pth&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">del&lt;/span> &lt;span class="n">viewpoint_cam&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">image&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">viewspace_point_tensor&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">visibility_filter&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">radii&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">gt_image&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">Ll1&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">loss&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">render_pkg&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>在打了两个补丁之后，内存使用量终于得到了控制。在我们的案例中，GPU 内存使用量可以控制在 10GB 以下。&lt;/p>
+&lt;p>&lt;img src="https://sudofree.xyz/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak.png"
+width="482"
+height="328"
+srcset="https://sudofree.xyz/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak_hu17105495424874006886.png 480w, https://sudofree.xyz/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak_hu15803852992229199328.png 1024w"
+loading="lazy"
+alt="Memory Leak"
+class="gallery-image"
+data-flex-grow="146"
+data-flex-basis="352px"
+>&lt;/p>
+&lt;h2 id="结论">&lt;a href="#%e7%bb%93%e8%ae%ba" class="header-anchor">&lt;/a>结论
+&lt;/h2>&lt;p>我不确定是否应该向原始版本库报告这个问题。因为在过去的一年里，人们并没有意识到内存泄漏问题，所以我不确定这是否是一个普遍问题，或者只是我的情况。总之，我希望这篇文章能帮助正在为同样问题而苦恼的人。&lt;/p></description></item></channel></rss>

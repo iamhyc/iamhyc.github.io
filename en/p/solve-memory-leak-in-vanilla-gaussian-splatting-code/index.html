@@ -1,0 +1,448 @@
+<!doctype html><html lang=en dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="I wonder why there is no issue identify the memory leak problem. Maybe I am too lazy to look for it thoroughly on the internet. Anyway, I found there is an apparent memory leak problem in the original implementation (the source code is available on Github).\nI find the problem when I am working on loading a large dataset with around $600$ images and $4$ million points, jointly collected with accurate geometry mapping. And it simply takes up 20GB+ memory on the NVIDIA RTX 3090 GPU, and 15GB+ memory at the same time. While the scene is large indeed, I am curious why it takes up all the memory at the start, but not increasing w.r.t the training process!\n"><title>Solve Memory Leak in Vanilla Gaussian Splatting Code</title>
+<link rel=canonical href=https://sudofree.xyz/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/><link rel=stylesheet href=/scss/style.min.663803bebe609202d5b39d848f2d7c2dc8b598a2d879efa079fa88893d29c49c.css><meta property='og:title' content="Solve Memory Leak in Vanilla Gaussian Splatting Code"><meta property='og:description' content="I wonder why there is no issue identify the memory leak problem. Maybe I am too lazy to look for it thoroughly on the internet. Anyway, I found there is an apparent memory leak problem in the original implementation (the source code is available on Github).\nI find the problem when I am working on loading a large dataset with around $600$ images and $4$ million points, jointly collected with accurate geometry mapping. And it simply takes up 20GB+ memory on the NVIDIA RTX 3090 GPU, and 15GB+ memory at the same time. While the scene is large indeed, I am curious why it takes up all the memory at the start, but not increasing w.r.t the training process!\n"><meta property='og:url' content='https://sudofree.xyz/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/'><meta property='og:site_name' content='My Shares and Proofs'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='gaussian-splatting'><meta property='article:tag' content='pytorch'><meta property='article:tag' content='memory-footprint'><meta property='article:published_time' content='2024-09-02T15:43:01+08:00'><meta property='article:modified_time' content='2024-09-02T15:43:01+08:00'><meta property='og:image' content='https://sudofree.xyz/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak.png'><meta name=twitter:title content="Solve Memory Leak in Vanilla Gaussian Splatting Code"><meta name=twitter:description content="I wonder why there is no issue identify the memory leak problem. Maybe I am too lazy to look for it thoroughly on the internet. Anyway, I found there is an apparent memory leak problem in the original implementation (the source code is available on Github).\nI find the problem when I am working on loading a large dataset with around $600$ images and $4$ million points, jointly collected with accurate geometry mapping. And it simply takes up 20GB+ memory on the NVIDIA RTX 3090 GPU, and 15GB+ memory at the same time. While the scene is large indeed, I am curious why it takes up all the memory at the start, but not increasing w.r.t the training process!\n"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content='https://sudofree.xyz/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak.png'><link rel="shortcut icon" href=/favicon.png></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/en/><img src=/img/pika_hu14648587237871782958.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>💫</span></figure><div class=site-meta><h1 class=site-name><a href=/en>My Shares and Proofs</a></h1><h2 class=site-description>Freelance Researcher & Developer.</h2></div></header><ol class=menu-social><li><a href=https://github.com/iamhyc target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://leetcode.com/u/sudo_free/ target=_blank title=LeetCode rel=me><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-leetcode"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 13h7.5"/><path d="M9.424 7.268l4.999-4.999"/><path d="M16.633 16.644l-2.402 2.415a3.189 3.189.0 01-4.524.0l-3.77-3.787a3.223 3.223.0 010-4.544l3.77-3.787a3.189 3.189.0 014.524.0l2.302 2.313"/></svg></a></li><li><a href=https://x.com/sudo_free target=_blank title=Twitter rel=me><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-x"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4l11.733 16H20L8.267 4z"/><path d="M4 20l6.768-6.768m2.46-2.46L20 4"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/en/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/en/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/en/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/en/links/><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg>
+<span>Links</span></a></li><li><a href=https://resume.sudofree.xyz target=_blank><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-external-link"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6H6A2 2 0 004 8v10a2 2 0 002 2h10a2 2 0 002-2v-6"/><path d="M11 13l9-9"/><path d="M15 4h5v5"/></svg>
+<span>My Resume</span></a></li><li class=menu-bottom-section><ol class=menu><li id=i18n-switch><svg class="icon icon-tabler icon-tabler-language" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 5h7"/><path d="M9 3v2c0 4.418-2.239 8-5 8"/><path d="M5 9c-.003 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4-9 4 9"/><path d="M19.1 18h-6.2"/></svg>
+<select name=language title=language onchange="window.location.href=this.selectedOptions[0].value"><option value=https://sudofree.xyz/>简体中文</option><option value=https://sudofree.xyz/en/ selected>English</option></select></li><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#the-first-patch---lazy-loading>The First Patch - Lazy Loading</a></li><li><a href=#the-second-patch---memory-leak-fix>The Second Patch - Memory Leak Fix</a></li><li><a href=#conclusion>Conclusion</a></li></ol></nav></div></section></aside><main class="main full-width"><article class="has-image main-article"><header class=article-header><div class=article-image><a href=/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/><img src=/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak_hu18202915622952014606.png srcset="/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak_hu18202915622952014606.png 800w, /en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak_hu18436069065731162119.png 1600w" width=800 height=544 loading=lazy alt="Featured image of post Solve Memory Leak in Vanilla Gaussian Splatting Code"></a></div><div class=article-details><header class=article-category><a href=/en/categories/practice/ style=background-color:#ccd5ae;color:#fff>Practice</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/>Solve Memory Leak in Vanilla Gaussian Splatting Code</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published>Sep 02, 2024</time></div></footer><footer class=article-translations><svg class="icon icon-tabler icon-tabler-language" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 5h7"/><path d="M9 3v2c0 4.418-2.239 8-5 8"/><path d="M5 9c-.003 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4-9 4 9"/><path d="M19.1 18h-6.2"/></svg><div><a href=https://sudofree.xyz/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/ class=link>简体中文</a></div></footer></div></header><section class=article-content><p>I wonder why there is no issue identify the memory leak problem. Maybe I am too lazy to look for it thoroughly on the internet.
+Anyway, I found there is an apparent memory leak problem in the original implementation (the source code is available on <a class=link href=https://github.com/graphdeco-inria/gaussian-splatting target=_blank rel=noopener>Github</a>).</p><p>I find the problem when I am working on loading a large dataset with around $600$ images and $4$ million points, jointly collected with accurate geometry mapping. And it simply takes up 20GB+ memory on the NVIDIA RTX 3090 GPU, and 15GB+ memory at the same time. While the scene is large indeed, I am curious why it takes up all the memory at the start, but not increasing w.r.t the training process!</p><h2 id=the-first-patch---lazy-loading><a href=#the-first-patch---lazy-loading class=header-anchor></a>The First Patch - Lazy Loading</h2><p>Firstly, I identify the cause of huge memory footprint on CPU (i.e., RAM usage): all the images are loaded in RAM with corresponding tensors on GPU. The related source code is in <a class=link href=https://github.com/graphdeco-inria/gaussian-splatting/blob/main/utils/camera_utils.py#L20 target=_blank rel=noopener><code>utils/camera_utils.py#L20</code></a>:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>def</span> <span class=nf>loadCam</span><span class=p>(</span><span class=n>args</span><span class=p>,</span> <span class=nb>id</span><span class=p>,</span> <span class=n>cam_info</span><span class=p>,</span> <span class=n>resolution_scale</span><span class=p>,</span> <span class=n>is_test_dataset</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=o>...</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=n>Camera</span><span class=p>(</span><span class=n>resolution</span><span class=p>,</span> <span class=n>colmap_id</span><span class=o>=</span><span class=n>cam_info</span><span class=o>.</span><span class=n>uid</span><span class=p>,</span> <span class=n>R</span><span class=o>=</span><span class=n>cam_info</span><span class=o>.</span><span class=n>R</span><span class=p>,</span> <span class=n>T</span><span class=o>=</span><span class=n>cam_info</span><span class=o>.</span><span class=n>T</span><span class=p>,</span> 
+</span></span><span class=line><span class=cl>                  <span class=n>FoVx</span><span class=o>=</span><span class=n>cam_info</span><span class=o>.</span><span class=n>FovX</span><span class=p>,</span> <span class=n>FoVy</span><span class=o>=</span><span class=n>cam_info</span><span class=o>.</span><span class=n>FovY</span><span class=p>,</span> <span class=n>depth_params</span><span class=o>=</span><span class=n>cam_info</span><span class=o>.</span><span class=n>depth_params</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                  <span class=n>image</span><span class=o>=</span><span class=n>image</span><span class=p>,</span> <span class=n>invdepthmap</span><span class=o>=</span><span class=n>invdepthmap</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                  <span class=n>image_name</span><span class=o>=</span><span class=n>cam_info</span><span class=o>.</span><span class=n>image_name</span><span class=p>,</span> <span class=n>uid</span><span class=o>=</span><span class=nb>id</span><span class=p>,</span> <span class=n>data_device</span><span class=o>=</span><span class=n>args</span><span class=o>.</span><span class=n>data_device</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                  <span class=n>train_test_exp</span><span class=o>=</span><span class=n>args</span><span class=o>.</span><span class=n>train_test_exp</span><span class=p>,</span> <span class=n>is_test_dataset</span><span class=o>=</span><span class=n>is_test_dataset</span><span class=p>,</span> <span class=n>is_test_view</span><span class=o>=</span><span class=n>cam_info</span><span class=o>.</span><span class=n>is_test</span><span class=p>)</span>
+</span></span></code></pre></td></tr></table></div></div><p>My immediate thought is to do the tradeoff: the image loading time may not deserve so much memory consumption, especially considering the following up huge training burden.
+Therefore, I compose a <code>LazyLoader</code> class to delay the instainiation of <code>Camera</code> class until the first reference. The example implementation is below:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=kn>from</span> <span class=nn>scene.cameras</span> <span class=kn>import</span> <span class=n>Camera</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>class</span> <span class=nc>LazyLoader</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=bp>cls</span><span class=p>,</span> <span class=o>*</span><span class=n>args</span><span class=p>,</span> <span class=o>**</span><span class=n>kwargs</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>cls</span> <span class=o>=</span> <span class=bp>cls</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>args</span> <span class=o>=</span> <span class=n>args</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>kwargs</span> <span class=o>=</span> <span class=n>kwargs</span>
+</span></span><span class=line><span class=cl>        <span class=bp>self</span><span class=o>.</span><span class=n>instance</span> <span class=o>=</span> <span class=kc>None</span>
+</span></span><span class=line><span class=cl>        <span class=k>pass</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=fm>__getattribute__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>name</span><span class=p>:</span> <span class=nb>str</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>name</span> <span class=ow>in</span> <span class=p>[</span><span class=s1>&#39;cls&#39;</span><span class=p>,</span> <span class=s1>&#39;args&#39;</span><span class=p>,</span> <span class=s1>&#39;kwargs&#39;</span><span class=p>,</span> <span class=s1>&#39;instance&#39;</span><span class=p>]:</span>
+</span></span><span class=line><span class=cl>            <span class=k>return</span> <span class=nb>super</span><span class=p>()</span><span class=o>.</span><span class=fm>__getattribute__</span><span class=p>(</span><span class=n>name</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=k>if</span> <span class=ow>not</span> <span class=bp>self</span><span class=o>.</span><span class=n>instance</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                <span class=bp>self</span><span class=o>.</span><span class=n>instance</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>cls</span><span class=p>(</span><span class=o>*</span><span class=bp>self</span><span class=o>.</span><span class=n>args</span><span class=p>,</span> <span class=o>**</span><span class=bp>self</span><span class=o>.</span><span class=n>kwargs</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>            <span class=k>return</span> <span class=nb>getattr</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>instance</span><span class=p>,</span> <span class=n>name</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=fm>__del__</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>instance</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=k>del</span> <span class=bp>self</span><span class=o>.</span><span class=n>instance</span>
+</span></span><span class=line><span class=cl>        <span class=k>pass</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>pass</span>
+</span></span></code></pre></td></tr></table></div></div><p>The original reference of <code>Camera</code> class build is therefore revised as:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-diff data-lang=diff><span class=line><span class=cl><span class=gd>-    return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+    return LazyLoader(Camera, colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
+</span></span></span></code></pre></td></tr></table></div></div><p>And after the usage in the main training loop in <code>train.py</code>, the image could be immediately deleted, until created at the next usage.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-diff data-lang=diff><span class=line><span class=cl>             # Loss
+</span></span><span class=line><span class=cl>             gt_image = viewpoint_cam.original_image.cuda()
+</span></span><span class=line><span class=cl><span class=gi>+            del viewpoint_cam
+</span></span></span><span class=line><span class=cl><span class=gi></span>             Ll1 = l1_loss(image, gt_image)
+</span></span><span class=line><span class=cl>             loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
+</span></span><span class=line><span class=cl>             loss.backward()
+</span></span></code></pre></td></tr></table></div></div><p>However, the weird thing is, the memory usage does start with an acceptable amount at the start with image loading one-by-one as expected. But it finally grows up to 20GB+ and then never decreases. So I realized the real problem here is, the memory leak.</p><h2 id=the-second-patch---memory-leak-fix><a href=#the-second-patch---memory-leak-fix class=header-anchor></a>The Second Patch - Memory Leak Fix</h2><p>The memory leak here is very confusing. As I mentioned before, I use <code>del</code> to remove the reference to the <code>Camera</code> class in Python, and all the held memory should be wiped out at the same time. I have tried to search for the cause everywhere but only to find out it is related to PyTorch. Since I could not dig into the CUDA tensor things, I started to try to <code>del</code> everything related in Python code. Luckily, it turns out to work.</p><p>The patch could be broken down into two parts. The first part is to improve the efficiency of image loading:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>  1
+</span><span class=lnt>  2
+</span><span class=lnt>  3
+</span><span class=lnt>  4
+</span><span class=lnt>  5
+</span><span class=lnt>  6
+</span><span class=lnt>  7
+</span><span class=lnt>  8
+</span><span class=lnt>  9
+</span><span class=lnt> 10
+</span><span class=lnt> 11
+</span><span class=lnt> 12
+</span><span class=lnt> 13
+</span><span class=lnt> 14
+</span><span class=lnt> 15
+</span><span class=lnt> 16
+</span><span class=lnt> 17
+</span><span class=lnt> 18
+</span><span class=lnt> 19
+</span><span class=lnt> 20
+</span><span class=lnt> 21
+</span><span class=lnt> 22
+</span><span class=lnt> 23
+</span><span class=lnt> 24
+</span><span class=lnt> 25
+</span><span class=lnt> 26
+</span><span class=lnt> 27
+</span><span class=lnt> 28
+</span><span class=lnt> 29
+</span><span class=lnt> 30
+</span><span class=lnt> 31
+</span><span class=lnt> 32
+</span><span class=lnt> 33
+</span><span class=lnt> 34
+</span><span class=lnt> 35
+</span><span class=lnt> 36
+</span><span class=lnt> 37
+</span><span class=lnt> 38
+</span><span class=lnt> 39
+</span><span class=lnt> 40
+</span><span class=lnt> 41
+</span><span class=lnt> 42
+</span><span class=lnt> 43
+</span><span class=lnt> 44
+</span><span class=lnt> 45
+</span><span class=lnt> 46
+</span><span class=lnt> 47
+</span><span class=lnt> 48
+</span><span class=lnt> 49
+</span><span class=lnt> 50
+</span><span class=lnt> 51
+</span><span class=lnt> 52
+</span><span class=lnt> 53
+</span><span class=lnt> 54
+</span><span class=lnt> 55
+</span><span class=lnt> 56
+</span><span class=lnt> 57
+</span><span class=lnt> 58
+</span><span class=lnt> 59
+</span><span class=lnt> 60
+</span><span class=lnt> 61
+</span><span class=lnt> 62
+</span><span class=lnt> 63
+</span><span class=lnt> 64
+</span><span class=lnt> 65
+</span><span class=lnt> 66
+</span><span class=lnt> 67
+</span><span class=lnt> 68
+</span><span class=lnt> 69
+</span><span class=lnt> 70
+</span><span class=lnt> 71
+</span><span class=lnt> 72
+</span><span class=lnt> 73
+</span><span class=lnt> 74
+</span><span class=lnt> 75
+</span><span class=lnt> 76
+</span><span class=lnt> 77
+</span><span class=lnt> 78
+</span><span class=lnt> 79
+</span><span class=lnt> 80
+</span><span class=lnt> 81
+</span><span class=lnt> 82
+</span><span class=lnt> 83
+</span><span class=lnt> 84
+</span><span class=lnt> 85
+</span><span class=lnt> 86
+</span><span class=lnt> 87
+</span><span class=lnt> 88
+</span><span class=lnt> 89
+</span><span class=lnt> 90
+</span><span class=lnt> 91
+</span><span class=lnt> 92
+</span><span class=lnt> 93
+</span><span class=lnt> 94
+</span><span class=lnt> 95
+</span><span class=lnt> 96
+</span><span class=lnt> 97
+</span><span class=lnt> 98
+</span><span class=lnt> 99
+</span><span class=lnt>100
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-diff data-lang=diff><span class=line><span class=cl><span class=gh>diff --git a/scene/__init__.py b/scene/__init__.py
+</span></span></span><span class=line><span class=cl><span class=gh></span><span class=gd>--- a/scene/__init__.py
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+++ b/scene/__init__.py
+</span></span></span><span class=line><span class=cl><span class=gi></span><span class=gu>@@ -37,9 +37,6 @@ class Scene:
+</span></span></span><span class=line><span class=cl><span class=gu></span>                 self.loaded_iter = load_iteration
+</span></span><span class=line><span class=cl>             print(&#34;Loading trained model at iteration {}&#34;.format(self.loaded_iter))
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=gd>-        self.train_cameras = {}
+</span></span></span><span class=line><span class=cl><span class=gd>-        self.test_cameras = {}
+</span></span></span><span class=line><span class=cl><span class=gd>-
+</span></span></span><span class=line><span class=cl><span class=gd></span>         if os.path.exists(os.path.join(args.source_path, &#34;sparse&#34;)):
+</span></span><span class=line><span class=cl>             scene_info = sceneLoadTypeCallbacks[&#34;Colmap&#34;](args.source_path, args.images, args.eval)
+</span></span><span class=line><span class=cl>         elif os.path.exists(os.path.join(args.source_path, &#34;transforms_train.json&#34;)):
+</span></span><span class=line><span class=cl><span class=gu>@@ -67,12 +64,8 @@ class Scene:
+</span></span></span><span class=line><span class=cl><span class=gu></span>             random.shuffle(scene_info.test_cameras)  # Multi-res consistent random shuffling
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl>         self.cameras_extent = scene_info.nerf_normalization[&#34;radius&#34;]
+</span></span><span class=line><span class=cl><span class=gd>-
+</span></span></span><span class=line><span class=cl><span class=gd>-        for resolution_scale in resolution_scales:
+</span></span></span><span class=line><span class=cl><span class=gd>-            print(&#34;Loading Training Cameras&#34;)
+</span></span></span><span class=line><span class=cl><span class=gd>-            self.train_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.train_cameras, resolution_scale, args)
+</span></span></span><span class=line><span class=cl><span class=gd>-            print(&#34;Loading Test Cameras&#34;)
+</span></span></span><span class=line><span class=cl><span class=gd>-            self.test_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.test_cameras, resolution_scale, args)
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+        self.scene_info = scene_info
+</span></span></span><span class=line><span class=cl><span class=gi>+        self.args = args
+</span></span></span><span class=line><span class=cl><span class=gi></span> 
+</span></span><span class=line><span class=cl>         if self.loaded_iter:
+</span></span><span class=line><span class=cl>             self.gaussians.load_ply(os.path.join(self.model_path,
+</span></span><span class=line><span class=cl><span class=gu>@@ -87,7 +80,7 @@ class Scene:
+</span></span></span><span class=line><span class=cl><span class=gu></span>         self.gaussians.save_ply(os.path.join(point_cloud_path, &#34;point_cloud.ply&#34;))
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl>     def getTrainCameras(self, scale=1.0):
+</span></span><span class=line><span class=cl><span class=gd>-        return self.train_cameras[scale]
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+        return cameraList_from_camInfos(self.scene_info.train_cameras, scale, self.args)
+</span></span></span><span class=line><span class=cl><span class=gi></span> 
+</span></span><span class=line><span class=cl>     def getTestCameras(self, scale=1.0):
+</span></span><span class=line><span class=cl><span class=gd>-        return self.test_cameras[scale]
+</span></span></span><span class=line><span class=cl><span class=gd></span>\ No newline at end of file
+</span></span><span class=line><span class=cl><span class=gi>+        return cameraList_from_camInfos(self.scene_info.test_cameras, scale, self.args)
+</span></span></span><span class=line><span class=cl><span class=gi></span>\ No newline at end of file
+</span></span><span class=line><span class=cl><span class=gh>diff --git a/scene/cameras.py b/scene/cameras.py
+</span></span></span><span class=line><span class=cl><span class=gh></span><span class=gd>--- a/scene/cameras.py
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+++ b/scene/cameras.py
+</span></span></span><span class=line><span class=cl><span class=gi></span><span class=gu>@@ -17,6 +17,7 @@ from utils.graphics_utils import getWorld2View2, getProjectionMatrix
+</span></span></span><span class=line><span class=cl><span class=gu></span> class Camera(nn.Module):
+</span></span><span class=line><span class=cl>     def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask,
+</span></span><span class=line><span class=cl>                  image_name, uid,
+</span></span><span class=line><span class=cl><span class=gi>+                 raw_image=None,
+</span></span></span><span class=line><span class=cl><span class=gi></span>                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = &#34;cuda&#34;
+</span></span><span class=line><span class=cl>                  ):
+</span></span><span class=line><span class=cl>         super(Camera, self).__init__()
+</span></span><span class=line><span class=cl><span class=gu>@@ -29,6 +30,14 @@ class Camera(nn.Module):
+</span></span></span><span class=line><span class=cl><span class=gu></span>         self.FoVy = FoVy
+</span></span><span class=line><span class=cl>         self.image_name = image_name
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=gi>+        if raw_image is not None:
+</span></span></span><span class=line><span class=cl><span class=gi>+            image = raw_image[:3, ...]
+</span></span></span><span class=line><span class=cl><span class=gi>+            gt_alpha_mask = None
+</span></span></span><span class=line><span class=cl><span class=gi>+
+</span></span></span><span class=line><span class=cl><span class=gi>+            if raw_image.shape[1] == 4:
+</span></span></span><span class=line><span class=cl><span class=gi>+                gt_alpha_mask = raw_image[3:4, ...]
+</span></span></span><span class=line><span class=cl><span class=gi>+            del raw_image
+</span></span></span><span class=line><span class=cl><span class=gi>+
+</span></span></span><span class=line><span class=cl><span class=gi></span>         try:
+</span></span><span class=line><span class=cl>             self.data_device = torch.device(data_device)
+</span></span><span class=line><span class=cl>         except Exception as e:
+</span></span><span class=line><span class=cl><span class=gu>@@ -39,9 +48,11 @@ class Camera(nn.Module):
+</span></span></span><span class=line><span class=cl><span class=gu></span>         self.original_image = image.clamp(0.0, 1.0).to(self.data_device)
+</span></span><span class=line><span class=cl>         self.image_width = self.original_image.shape[2]
+</span></span><span class=line><span class=cl>         self.image_height = self.original_image.shape[1]
+</span></span><span class=line><span class=cl><span class=gi>+        del image
+</span></span></span><span class=line><span class=cl><span class=gi></span> 
+</span></span><span class=line><span class=cl>         if gt_alpha_mask is not None:
+</span></span><span class=line><span class=cl>             self.original_image *= gt_alpha_mask.to(self.data_device)
+</span></span><span class=line><span class=cl><span class=gi>+            del gt_alpha_mask
+</span></span></span><span class=line><span class=cl><span class=gi></span>         else:
+</span></span><span class=line><span class=cl>             self.original_image *= torch.ones((1, self.image_height, self.image_width), device=self.data_device)
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=gu>@@ -56,6 +67,9 @@ class Camera(nn.Module):
+</span></span></span><span class=line><span class=cl><span class=gu></span>         self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
+</span></span><span class=line><span class=cl>         self.camera_center = self.world_view_transform.inverse()[3, :3]
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=gi>+    def __del__(self):
+</span></span></span><span class=line><span class=cl><span class=gi>+        del self.original_image, self.world_view_transform, self.projection_matrix, self.full_proj_transform, self.camera_center
+</span></span></span><span class=line><span class=cl><span class=gi>+
+</span></span></span><span class=line><span class=cl><span class=gi></span> class MiniCam:
+</span></span><span class=line><span class=cl>     def __init__(self, width, height, fovy, fovx, znear, zfar, world_view_transform, full_proj_transform):
+</span></span><span class=line><span class=cl>         self.image_width = width
+</span></span><span class=line><span class=cl><span class=gh>diff --git a/train.py b/train.py
+</span></span></span><span class=line><span class=cl><span class=gh></span><span class=gd>--- a/train.py
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+++ b/train.py
+</span></span></span><span class=line><span class=cl><span class=gi></span><span class=gu>@@ -44,103 +43,82 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
+</span></span></span><span class=line><span class=cl><span class=gu></span>     iter_start = torch.cuda.Event(enable_timing = True)
+</span></span><span class=line><span class=cl>     iter_end = torch.cuda.Event(enable_timing = True)
+</span></span><span class=line><span class=cl> 
+</span></span><span class=line><span class=cl><span class=gd>-    viewpoint_stack = None
+</span></span></span><span class=line><span class=cl><span class=gd></span><span class=gi>+    viewpoint_stack = scene.getTrainCameras()
+</span></span></span><span class=line><span class=cl><span class=gi></span>     ema_loss_for_log = 0.0
+</span></span><span class=line><span class=cl>     progress_bar = tqdm(range(first_iter, opt.iterations), desc=&#34;Training progress&#34;)
+</span></span><span class=line><span class=cl>     first_iter += 1
+</span></span></code></pre></td></tr></table></div></div><p>The second part is to use <code>del</code> in the main training loop. Since I have done other modification to the training procedure, I could not give the complete patch here. A reduced version is shown below.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span><span class=lnt>64
+</span><span class=lnt>65
+</span><span class=lnt>66
+</span><span class=lnt>67
+</span><span class=lnt>68
+</span><span class=lnt>69
+</span><span class=lnt>70
+</span><span class=lnt>71
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>for</span> <span class=n>iteration</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=n>first_iter</span><span class=p>,</span> <span class=n>opt</span><span class=o>.</span><span class=n>iterations</span> <span class=o>+</span> <span class=mi>1</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=n>iter_start</span><span class=o>.</span><span class=n>record</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>gaussians</span><span class=o>.</span><span class=n>update_learning_rate</span><span class=p>(</span><span class=n>iteration</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Every 1000 its we increase the levels of SH up to a maximum degree</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=n>iteration</span> <span class=o>%</span> <span class=mi>1000</span> <span class=o>==</span> <span class=mi>0</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>gaussians</span><span class=o>.</span><span class=n>oneupSHdegree</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Pick a random Camera</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=nb>len</span><span class=p>(</span><span class=n>viewpoint_stack</span><span class=p>)</span><span class=o>==</span><span class=mi>0</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=k>del</span> <span class=n>viewpoint_stack</span>
+</span></span><span class=line><span class=cl>        <span class=n>viewpoint_stack</span> <span class=o>=</span> <span class=n>scene</span><span class=o>.</span><span class=n>getTrainCameras</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>viewpoint_cam</span> <span class=o>=</span> <span class=n>viewpoint_stack</span><span class=o>.</span><span class=n>pop</span><span class=p>(</span><span class=n>randint</span><span class=p>(</span><span class=mi>0</span><span class=p>,</span> <span class=nb>len</span><span class=p>(</span><span class=n>viewpoint_stack</span><span class=p>)</span><span class=o>-</span><span class=mi>1</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Render</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>iteration</span> <span class=o>-</span> <span class=mi>1</span><span class=p>)</span> <span class=o>==</span> <span class=n>debug_from</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>        <span class=n>pipe</span><span class=o>.</span><span class=n>debug</span> <span class=o>=</span> <span class=kc>True</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>bg</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>rand</span><span class=p>((</span><span class=mi>3</span><span class=p>),</span> <span class=n>device</span><span class=o>=</span><span class=s2>&#34;cuda&#34;</span><span class=p>)</span> <span class=k>if</span> <span class=n>opt</span><span class=o>.</span><span class=n>random_background</span> <span class=k>else</span> <span class=n>background</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>render_pkg</span> <span class=o>=</span> <span class=n>render</span><span class=p>(</span><span class=n>viewpoint_cam</span><span class=p>,</span> <span class=n>gaussians</span><span class=p>,</span> <span class=n>pipe</span><span class=p>,</span> <span class=n>bg</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>image</span><span class=p>,</span> <span class=n>viewspace_point_tensor</span><span class=p>,</span> <span class=n>visibility_filter</span><span class=p>,</span> <span class=n>radii</span> <span class=o>=</span> <span class=n>render_pkg</span><span class=p>[</span><span class=s2>&#34;render&#34;</span><span class=p>],</span> <span class=n>render_pkg</span><span class=p>[</span><span class=s2>&#34;viewspace_points&#34;</span><span class=p>],</span> <span class=n>render_pkg</span><span class=p>[</span><span class=s2>&#34;visibility_filter&#34;</span><span class=p>],</span> <span class=n>render_pkg</span><span class=p>[</span><span class=s2>&#34;radii&#34;</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Loss</span>
+</span></span><span class=line><span class=cl>    <span class=n>gt_image</span> <span class=o>=</span> <span class=n>viewpoint_cam</span><span class=o>.</span><span class=n>original_image</span><span class=o>.</span><span class=n>cuda</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>    <span class=n>Ll1</span> <span class=o>=</span> <span class=n>l1_loss</span><span class=p>(</span><span class=n>image</span><span class=p>,</span> <span class=n>gt_image</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>    <span class=n>loss</span> <span class=o>=</span> <span class=p>(</span><span class=mf>1.0</span> <span class=o>-</span> <span class=n>opt</span><span class=o>.</span><span class=n>lambda_dssim</span><span class=p>)</span> <span class=o>*</span> <span class=n>Ll1</span> <span class=o>+</span> <span class=n>opt</span><span class=o>.</span><span class=n>lambda_dssim</span> <span class=o>*</span> <span class=p>(</span><span class=mf>1.0</span> <span class=o>-</span> <span class=n>ssim</span><span class=p>(</span><span class=n>image</span><span class=p>,</span> <span class=n>gt_image</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>    <span class=n>loss</span><span class=o>.</span><span class=n>backward</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>iter_end</span><span class=o>.</span><span class=n>record</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>with</span> <span class=n>torch</span><span class=o>.</span><span class=n>no_grad</span><span class=p>():</span>
+</span></span><span class=line><span class=cl>        <span class=c1># Progress bar</span>
+</span></span><span class=line><span class=cl>        <span class=n>ema_loss_for_log</span> <span class=o>=</span> <span class=mf>0.4</span> <span class=o>*</span> <span class=n>loss</span><span class=o>.</span><span class=n>item</span><span class=p>()</span> <span class=o>+</span> <span class=mf>0.6</span> <span class=o>*</span> <span class=n>ema_loss_for_log</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>iteration</span> <span class=o>%</span> <span class=mi>10</span> <span class=o>==</span> <span class=mi>0</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>progress_bar</span><span class=o>.</span><span class=n>set_postfix</span><span class=p>({</span><span class=s2>&#34;Loss&#34;</span><span class=p>:</span> <span class=sa>f</span><span class=s2>&#34;</span><span class=si>{</span><span class=n>ema_loss_for_log</span><span class=si>:</span><span class=s2>.</span><span class=si>{</span><span class=mi>7</span><span class=si>}</span><span class=s2>f</span><span class=si>}</span><span class=s2>&#34;</span><span class=p>})</span>
+</span></span><span class=line><span class=cl>            <span class=n>progress_bar</span><span class=o>.</span><span class=n>update</span><span class=p>(</span><span class=mi>10</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>iteration</span> <span class=o>==</span> <span class=n>opt</span><span class=o>.</span><span class=n>iterations</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>progress_bar</span><span class=o>.</span><span class=n>close</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=c1># Log and save</span>
+</span></span><span class=line><span class=cl>        <span class=n>torch</span><span class=o>.</span><span class=n>cuda</span><span class=o>.</span><span class=n>empty_cache</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=p>(</span><span class=n>iteration</span> <span class=ow>in</span> <span class=n>saving_iterations</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>            <span class=nb>print</span><span class=p>(</span><span class=s2>&#34;</span><span class=se>\n</span><span class=s2>[ITER </span><span class=si>{}</span><span class=s2>] Saving Gaussians&#34;</span><span class=o>.</span><span class=n>format</span><span class=p>(</span><span class=n>iteration</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>            <span class=n>scene</span><span class=o>.</span><span class=n>save</span><span class=p>(</span><span class=n>iteration</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=c1># Densification</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>iteration</span> <span class=o>&lt;</span> <span class=n>opt</span><span class=o>.</span><span class=n>densify_until_iter</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=c1># Keep track of max radii in image-space for pruning</span>
+</span></span><span class=line><span class=cl>            <span class=n>gaussians</span><span class=o>.</span><span class=n>max_radii2D</span><span class=p>[</span><span class=n>visibility_filter</span><span class=p>]</span> <span class=o>=</span> <span class=n>torch</span><span class=o>.</span><span class=n>max</span><span class=p>(</span><span class=n>gaussians</span><span class=o>.</span><span class=n>max_radii2D</span><span class=p>[</span><span class=n>visibility_filter</span><span class=p>],</span> <span class=n>radii</span><span class=p>[</span><span class=n>visibility_filter</span><span class=p>])</span>
+</span></span><span class=line><span class=cl>            <span class=n>gaussians</span><span class=o>.</span><span class=n>add_densification_stats</span><span class=p>(</span><span class=n>viewspace_point_tensor</span><span class=p>,</span> <span class=n>visibility_filter</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>            <span class=k>if</span> <span class=n>iteration</span> <span class=o>&gt;</span> <span class=n>opt</span><span class=o>.</span><span class=n>densify_from_iter</span> <span class=ow>and</span> <span class=n>iteration</span> <span class=o>%</span> <span class=n>opt</span><span class=o>.</span><span class=n>densification_interval</span> <span class=o>==</span> <span class=mi>0</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>                <span class=n>size_threshold</span> <span class=o>=</span> <span class=mi>20</span> <span class=k>if</span> <span class=n>iteration</span> <span class=o>&gt;</span> <span class=n>opt</span><span class=o>.</span><span class=n>opacity_reset_interval</span> <span class=k>else</span> <span class=kc>None</span>
+</span></span><span class=line><span class=cl>                <span class=n>gaussians</span><span class=o>.</span><span class=n>densify_and_prune</span><span class=p>(</span><span class=n>opt</span><span class=o>.</span><span class=n>densify_grad_threshold</span><span class=p>,</span> <span class=mf>0.005</span><span class=p>,</span> <span class=n>scene</span><span class=o>.</span><span class=n>cameras_extent</span><span class=p>,</span> <span class=n>size_threshold</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>            <span class=k>if</span> <span class=n>iteration</span> <span class=o>%</span> <span class=n>opt</span><span class=o>.</span><span class=n>opacity_reset_interval</span> <span class=o>==</span> <span class=mi>0</span> <span class=ow>or</span> <span class=p>(</span><span class=n>dataset</span><span class=o>.</span><span class=n>white_background</span> <span class=ow>and</span> <span class=n>iteration</span> <span class=o>==</span> <span class=n>opt</span><span class=o>.</span><span class=n>densify_from_iter</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>                <span class=n>gaussians</span><span class=o>.</span><span class=n>reset_opacity</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=c1># Optimizer step</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>iteration</span> <span class=o>&lt;</span> <span class=n>opt</span><span class=o>.</span><span class=n>iterations</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>            <span class=n>gaussians</span><span class=o>.</span><span class=n>optimizer</span><span class=o>.</span><span class=n>step</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>            <span class=n>gaussians</span><span class=o>.</span><span class=n>optimizer</span><span class=o>.</span><span class=n>zero_grad</span><span class=p>(</span><span class=n>set_to_none</span> <span class=o>=</span> <span class=kc>True</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=p>(</span><span class=n>iteration</span> <span class=ow>in</span> <span class=n>checkpoint_iterations</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>            <span class=nb>print</span><span class=p>(</span><span class=s2>&#34;</span><span class=se>\n</span><span class=s2>[ITER </span><span class=si>{}</span><span class=s2>] Saving Checkpoint&#34;</span><span class=o>.</span><span class=n>format</span><span class=p>(</span><span class=n>iteration</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>            <span class=n>torch</span><span class=o>.</span><span class=n>save</span><span class=p>((</span><span class=n>gaussians</span><span class=o>.</span><span class=n>capture</span><span class=p>(),</span> <span class=n>iteration</span><span class=p>),</span> <span class=n>scene</span><span class=o>.</span><span class=n>model_path</span> <span class=o>+</span> <span class=s2>&#34;/chkpnt&#34;</span> <span class=o>+</span> <span class=nb>str</span><span class=p>(</span><span class=n>iteration</span><span class=p>)</span> <span class=o>+</span> <span class=s2>&#34;.pth&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>del</span> <span class=n>viewpoint_cam</span><span class=p>,</span> <span class=n>image</span><span class=p>,</span> <span class=n>viewspace_point_tensor</span><span class=p>,</span> <span class=n>visibility_filter</span><span class=p>,</span> <span class=n>radii</span><span class=p>,</span> <span class=n>gt_image</span><span class=p>,</span> <span class=n>Ll1</span><span class=p>,</span> <span class=n>loss</span><span class=p>,</span> <span class=n>render_pkg</span>
+</span></span></code></pre></td></tr></table></div></div><p>After the two patches, the memory usage is finally under control. The GPU memory usage could be kept under 10GB in our case.</p><p><img src=/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak.png width=482 height=328 srcset="/en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak_hu17105495424874006886.png 480w, /en/p/solve-memory-leak-in-vanilla-gaussian-splatting-code/memory-leak_hu15803852992229199328.png 1024w" loading=lazy alt="Memory Leak" class=gallery-image data-flex-grow=146 data-flex-basis=352px></p><h2 id=conclusion><a href=#conclusion class=header-anchor></a>Conclusion</h2><p>I am not sure whether I should report the issue to the original repository. Since people are not aware of the memory leak problem in the past year, I am not sure whether it is a common problem or just a problem in my case. Anyway, I hope this post could help someone who is struggling with the same problem.</p></section><footer class=article-footer><section class=article-tags><a href=/en/tags/gaussian-splatting/>Gaussian-Splatting</a>
+<a href=/en/tags/pytorch/>Pytorch</a>
+<a href=/en/tags/memory-footprint/>Memory-Footprint</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})</script></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article class=has-image><a href=/en/p/retrohos-development-logs-01-migrating-libretro-cores/><div class=article-image><img src=/en/p/retrohos-development-logs-01-migrating-libretro-cores/ppsspp-libretro-core.dee13ae4a43bda0355514c7ca3e3c041_hu10607440905720520260.png width=250 height=150 loading=lazy alt="Featured image of post Retrohos Development Log #1: Migrating Libretro Cores" data-key=retrohos-development-logs-01-migrating-libretro-cores data-hash="md5-3uE65KQ72gNVUUx8o+PAQQ=="></div><div class=article-details><h2 class=article-title>Retrohos Development Log #1: Migrating Libretro Cores</h2></div></a></article></div></div></aside><script src=https://giscus.app/client.js data-repo=iamhyc/iamhyc.github.io data-repo-id="MDEwOlJlcG9zaXRvcnkxMTEzMDI0Mjk=" data-category=Announcements data-category-id=DIC_kwDOBqJXHc4CiEQu data-mapping=pathname data-strict=0 data-reactions-enabled=1 data-emit-metadata=1 data-input-position=top data-theme=noborder_light data-lang=en data-loading crossorigin=anonymous async></script><script>function setGiscusTheme(e){let t=document.querySelector("iframe.giscus-frame");t&&t.contentWindow.postMessage({giscus:{setConfig:{theme:e}}},"https://giscus.app")}(function(){addEventListener("message",t=>{if(event.origin!=="https://giscus.app")return;e()}),window.addEventListener("onColorSchemeChange",e);function e(){setGiscusTheme(document.documentElement.dataset.scheme==="light"?"noborder_light":"noborder_dark")}})()</script><footer class=site-footer><section class=copyright>&copy;
+2024 My Shares and Proofs</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.29.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.1e9a3bafd846ced4c345d084b355fb8c7bae75701c338f8a1f8a82c780137826.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>
